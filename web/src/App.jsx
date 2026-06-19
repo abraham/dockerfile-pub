@@ -1,7 +1,8 @@
-import { useState, useMemo, useCallback, useRef } from 'preact/hooks';
+import { useState, useMemo, useCallback } from 'preact/hooks';
 import { ExampleToggler } from './components/ExampleToggler';
 import { DockerfileViewer } from './components/DockerfileViewer';
 import { SidePanel } from './components/SidePanel';
+import { CopyButton } from './components/CopyButton';
 import { tokenize } from './data/tokenizer';
 import { EXAMPLES } from './data/examples';
 import { getExplanation } from './data/explanations';
@@ -36,17 +37,6 @@ export function App() {
   const handlePanelClose = useCallback(() => {
     setIsPanelOpen(false);
   }, []);
-
-  const [copied, setCopied] = useState(false);
-  const copyTimeoutRef = useRef(null);
-
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(EXAMPLES[activeExample].content).then(() => {
-      setCopied(true);
-      clearTimeout(copyTimeoutRef.current);
-      copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
-    });
-  }, [activeExample]);
 
   const handleExampleChange = useCallback((key) => {
     setActiveExample(key);
@@ -98,14 +88,7 @@ export function App() {
               <span class={styles.dot} aria-hidden="true" />
               <span class={styles.dot} aria-hidden="true" />
               <span class={styles.fileName}>Dockerfile</span>
-              <button
-                type="button"
-                class={styles.copyButton}
-                onClick={handleCopy}
-                aria-label={copied ? 'Copied to clipboard' : 'Copy Dockerfile to clipboard'}
-              >
-                {copied ? 'Copied!' : 'Copy'}
-              </button>
+              <CopyButton text={EXAMPLES[activeExample].content} />
             </div>
             <DockerfileViewer
               lines={lines}
