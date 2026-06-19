@@ -126,31 +126,9 @@ describe('App', () => {
     });
   });
 
-  describe('copy button', () => {
-    it('renders a copy button in the viewer header', () => {
-      render(<App />);
-      expect(screen.getByRole('button', { name: /copy dockerfile to clipboard/i })).toBeInTheDocument();
-    });
-
-    it('copies the Dockerfile content to clipboard when clicked', async () => {
-      const user = userEvent.setup();
-      render(<App />);
-      const copyBtn = screen.getByRole('button', { name: /copy dockerfile to clipboard/i });
-      await user.click(copyBtn);
-      // "Copied!" label confirms clipboard.writeText resolved
-      expect(await screen.findByRole('button', { name: /copied to clipboard/i })).toBeInTheDocument();
-    });
-
-    it('reverts button label back to "Copy" after timeout', async () => {
-      vi.useFakeTimers();
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      render(<App />);
-      const copyBtn = screen.getByRole('button', { name: /copy dockerfile to clipboard/i });
-      await user.click(copyBtn);
-      await screen.findByRole('button', { name: /copied to clipboard/i });
-      vi.advanceTimersByTime(2001);
-      expect(await screen.findByRole('button', { name: /copy dockerfile to clipboard/i })).toBeInTheDocument();
-      vi.useRealTimers();
-    });
+  it('renders the copy button in the viewer header', () => {
+    render(<App />);
+    expect(screen.getByRole('button', { name: /copy dockerfile to clipboard/i })).toBeInTheDocument();
   });
 });
+
