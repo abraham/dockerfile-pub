@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'preact/hooks';
 import { ExampleToggler } from './components/ExampleToggler';
 import { DockerfileViewer } from './components/DockerfileViewer';
 import { SidePanel } from './components/SidePanel';
+import { CopyButton } from './components/CopyButton';
 import { tokenize } from './data/tokenizer';
 import { EXAMPLES } from './data/examples';
 import { getExplanation } from './data/explanations';
@@ -87,6 +88,7 @@ export function App() {
               <span class={styles.dot} aria-hidden="true" />
               <span class={styles.dot} aria-hidden="true" />
               <span class={styles.fileName}>Dockerfile</span>
+              <CopyButton text={EXAMPLES[activeExample].content} />
             </div>
             <DockerfileViewer
               lines={lines}

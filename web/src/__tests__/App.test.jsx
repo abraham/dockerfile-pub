@@ -1,7 +1,14 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/preact';
 import userEvent from '@testing-library/user-event';
 import { App } from '../App';
+
+// Mock clipboard API (navigator.clipboard is not available in jsdom)
+Object.defineProperty(navigator, 'clipboard', {
+  value: { writeText: vi.fn().mockResolvedValue(undefined) },
+  writable: true,
+  configurable: true,
+});
 
 // localStorage is available in jsdom but let's reset between tests
 beforeEach(() => {
@@ -118,4 +125,10 @@ describe('App', () => {
       expect(docLink).toBeDefined();
     });
   });
+
+  it('renders the copy button in the viewer header', () => {
+    render(<App />);
+    expect(screen.getByRole('button', { name: /copy dockerfile to clipboard/i })).toBeInTheDocument();
+  });
 });
+
