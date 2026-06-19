@@ -69,7 +69,6 @@
 
   /* Layout */
   --header-height: 64px;
-  --panel-width: 380px;
 }
 
 @media (prefers-color-scheme: light) {
