@@ -99,6 +99,10 @@
   height: calc(100dvh - var(--header-height) - 80px - var(--sp-4) * 2);
 }
 
+.workspacePanelOpen .viewerSection {
+  flex: 0 0 calc((100% - var(--sp-4)) * 2 / 3);
+}
+
 .viewerSection {
   flex: 1;
   min-width: 0;
@@ -186,9 +190,11 @@
     flex-direction: column;
     height: auto;
     min-height: 50dvh;
+    align-items: stretch;
   }
 
   .viewerSection {
+    width: 100%;
     height: auto;
     min-height: 60dvh;
   }

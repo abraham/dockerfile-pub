@@ -49,7 +49,7 @@
 .lineContent {
   flex: 1;
   white-space: pre;
-  word-break: break-all;
+  overflow-wrap: normal;
 }
 
 /* Token base */
