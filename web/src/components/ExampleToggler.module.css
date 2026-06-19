@@ -1,0 +1,41 @@
+.toggler {
+  display: inline-flex;
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-full);
+  padding: 3px;
+  gap: 2px;
+}
+
+.button {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1;
+  padding: var(--sp-2) var(--sp-4);
+  border: none;
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--c-muted);
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.button:hover {
+  background: var(--c-surface-3);
+  color: var(--c-text-2);
+}
+
+.button.active {
+  background: var(--c-accent);
+  color: #fff;
+}
+
+@media (prefers-color-scheme: light) {
+  .button.active {
+    color: #fff;
+  }
+}
