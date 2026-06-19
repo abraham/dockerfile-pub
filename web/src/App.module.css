@@ -142,6 +142,7 @@
   font-size: var(--text-xs);
   color: var(--c-muted);
   margin-left: var(--sp-2);
+  flex: 1;
 }
 
 /* Remove the double border from the inner viewer */
