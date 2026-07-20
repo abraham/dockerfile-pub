@@ -8,8 +8,9 @@ Thank you for your interest in contributing! This document explains how to add n
 cd web
 npm install
 npm run dev     # start dev server at http://localhost:5173/
-npm run test:run  # run the test suite once
+npm run test:run  # run the unit/UI test suite once
 npm test          # watch mode
+npm run test:features  # run end-to-end feature tests (requires dev server)
 npm run lint      # ESLint
 npm run build     # production bundle in web/dist/
 ```
@@ -72,6 +73,7 @@ The tokenizer in `web/src/data/tokenizer.js` converts Dockerfile text into `Line
 
 - [ ] `npm run lint` passes with no warnings
 - [ ] `npm run test:run` passes (all tests green)
+- [ ] `npm run test:features` passes (requires a running dev server)
 - [ ] `npm run build` succeeds
 - [ ] New functionality has accompanying tests
 - [ ] New explanations link to official Docker documentation

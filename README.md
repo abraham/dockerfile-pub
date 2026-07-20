@@ -49,7 +49,7 @@ npm test
 
 The test suite covers:
 - **Unit tests** — tokenizer / parser and token → explanation mapping (`tokenizer.test.js`)
-- **UI tests** — example toggling, panel open/close, Escape key, documentation links (`App.test.jsx`, `SidePanel.test.jsx`)
+- **UI tests** — example toggling, panel open/close, Escape key, documentation links, copy button behaviour (`App.test.jsx`, `SidePanel.test.jsx`, `CopyButton.test.jsx`)
 
 ### Feature tests (end-to-end)
 
@@ -79,6 +79,16 @@ The Cucumber/Puppeteer feature tests navigate a real browser to a running instan
 
    Every scenario that requires the site begins with `Given the site is up`, which performs a quick health-check request to `BASE_URL` before the browser steps run. If the server is not reachable the step fails with a clear error message.
 
+The feature suite currently covers:
+
+| Feature file | Scenarios |
+|---|---|
+| `browser.feature` | Headless browser smoke test |
+| `site.feature` | Home page loads with the expected title |
+| `homepage.feature` | Homepage title, heading, and intro text |
+| `instruction_explanation.feature` | Clicking an instruction opens the panel; closing; switching instructions |
+| `example_switcher.feature` | Default example shown; switching examples; switching closes the panel |
+
 ### Lint
 
 ```bash
@@ -105,6 +115,14 @@ npm run preview
 web/
 ├── index.html                 Entry HTML
 ├── vite.config.js             Vite + Vitest configuration
+├── features/
+│   ├── browser.feature        Headless browser smoke test
+│   ├── site.feature           Site navigation smoke test
+│   ├── homepage.feature       Homepage content test
+│   ├── instruction_explanation.feature  Instruction panel tests
+│   ├── example_switcher.feature         Example toggle tests
+│   ├── step_definitions/      Cucumber step implementations
+│   └── support/               World + hooks (browser lifecycle)
 ├── src/
 │   ├── main.jsx               App entry point
 │   ├── App.jsx                Root component — state, layout
@@ -126,7 +144,8 @@ web/
 │       ├── setup.js
 │       ├── tokenizer.test.js
 │       ├── App.test.jsx
-│       └── SidePanel.test.jsx
+│       ├── SidePanel.test.jsx
+│       └── CopyButton.test.jsx
 ```
 
 ## Architecture overview
