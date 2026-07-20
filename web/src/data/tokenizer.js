@@ -119,14 +119,14 @@ function parseLine(raw, lineIndex) {
       makeToken(`${lineIndex}-${tokenIndex}`, keyword, TOKEN_TYPE.KEYWORD, lineIndex, tokenIndex++, keyword),
     );
 
-    const restTokens = tokenizeArgs(rest, lineIndex, tokenIndex);
+    const restTokens = tokenizeArgs(rest, lineIndex, tokenIndex, keyword);
     tokens.push(...restTokens);
 
     return { lineIndex, raw, type: LINE_TYPE.INSTRUCTION, keyword, tokens };
   }
 
   // Continuation line (indented shell commands, etc.)
-  const contTokens = tokenizeArgs(raw, lineIndex, 0);
+  const contTokens = tokenizeArgs(raw, lineIndex, 0, null);
   return { lineIndex, raw, type: LINE_TYPE.CONTINUATION, keyword: null, tokens: contTokens };
 }
 
@@ -135,9 +135,10 @@ function parseLine(raw, lineIndex) {
  * @param {string} text
  * @param {number} lineIndex
  * @param {number} startIndex
+ * @param {string|null} instructionKeyword
  * @returns {Token[]}
  */
-function tokenizeArgs(text, lineIndex, startIndex) {
+function tokenizeArgs(text, lineIndex, startIndex, instructionKeyword) {
   const tokens = [];
   let idx = startIndex;
   let remaining = text;
@@ -177,16 +178,30 @@ function tokenizeArgs(text, lineIndex, startIndex) {
     // Whitespace or non-special-char text chunk (stops before $, ", ' to allow other patterns)
     const chunkMatch = remaining.match(/^(\s+|[^\s$"']+|\$)/);
     if (chunkMatch) {
+      const chunkText = chunkMatch[1];
       tokens.push(
-        makeToken(`${lineIndex}-${idx}`, chunkMatch[1], TOKEN_TYPE.TEXT, lineIndex, idx++, null),
+        makeToken(
+          `${lineIndex}-${idx}`,
+          chunkText,
+          TOKEN_TYPE.TEXT,
+          lineIndex,
+          idx++,
+          getChunkExplanationKey(chunkText, instructionKeyword),
+        ),
       );
-      remaining = remaining.slice(chunkMatch[1].length);
+      remaining = remaining.slice(chunkText.length);
     } else {
       break;
     }
   }
 
   return tokens;
+}
+
+function getChunkExplanationKey(chunkText, instructionKeyword) {
+  if (instructionKeyword !== 'RUN') return null;
+  if (!chunkText.trim()) return null;
+  return `RUN_CHUNK:${chunkText}`;
 }
 
 /**

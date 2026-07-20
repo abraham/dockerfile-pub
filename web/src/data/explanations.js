@@ -456,5 +456,53 @@ const EXPLANATIONS = {
  */
 export function getExplanation(key) {
   if (!key) return null;
+  if (key.startsWith('RUN_CHUNK:')) {
+    return buildRunChunkExplanation(key.slice('RUN_CHUNK:'.length));
+  }
   return EXPLANATIONS[key] ?? null;
+}
+
+function buildRunChunkExplanation(chunk) {
+  if (!chunk) return null;
+
+  if (isRunControlOperator(chunk)) {
+    return {
+      title: chunk,
+      short: 'Shell control operator used to chain commands in RUN.',
+      details:
+        `"${chunk}" controls how shell commands flow inside RUN.\n\n` +
+        'Use these operators to combine related steps in one layer. For example, "&&" only runs ' +
+        'the next command if the previous one succeeds.',
+      syntax: `RUN command ${chunk} command`,
+      links: [{ label: 'RUN reference', url: 'https://docs.docker.com/reference/dockerfile/#run' }],
+    };
+  }
+
+  if (chunk.startsWith('-')) {
+    return {
+      title: chunk,
+      short: 'Command-line option passed to the command in RUN.',
+      details:
+        `"${chunk}" is an option argument for the command being run (for example adduser/addgroup).\n\n` +
+        'Option meanings depend on the tool. Check that tool’s documentation to understand the ' +
+        'exact behavior of this flag.',
+      syntax: `RUN command ${chunk} <value>`,
+      links: [{ label: 'RUN reference', url: 'https://docs.docker.com/reference/dockerfile/#run' }],
+    };
+  }
+
+  return {
+    title: chunk,
+    short: 'Part of the shell command executed by RUN.',
+    details:
+      `"${chunk}" is a command or argument in the RUN shell command.\n\n` +
+      'Everything after RUN is executed by the image shell (typically /bin/sh -c). Click other ' +
+      'parts of the line to inspect each command fragment.',
+    syntax: `RUN ${chunk}`,
+    links: [{ label: 'RUN reference', url: 'https://docs.docker.com/reference/dockerfile/#run' }],
+  };
+}
+
+function isRunControlOperator(chunk) {
+  return chunk === '&&' || chunk === '||' || chunk === ';' || chunk === '|';
 }
