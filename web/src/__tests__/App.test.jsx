@@ -87,6 +87,15 @@ describe('App', () => {
       expect(screen.getByRole('heading', { name: /from/i, level: 2 })).toBeInTheDocument();
     });
 
+    it('opens for RUN command fragments after the keyword', async () => {
+      const user = userEvent.setup();
+      render(<App />);
+      await user.click(screen.getByRole('button', { name: /complex/i }));
+      const addgroupBtn = screen.getByRole('button', { name: /^addgroup:/i });
+      await user.click(addgroupBtn);
+      expect(screen.getByRole('heading', { name: /^addgroup$/i, level: 2 })).toBeInTheDocument();
+    });
+
     it('closes when the close button is clicked', async () => {
       const user = userEvent.setup();
       render(<App />);
@@ -131,4 +140,3 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: /copy dockerfile to clipboard/i })).toBeInTheDocument();
   });
 });
-

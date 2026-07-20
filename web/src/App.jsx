@@ -77,7 +77,7 @@ export function App() {
             <span class={styles.exampleDesc}>{EXAMPLES[activeExample].description}</span>
           </div>
           <span class={styles.hint} aria-live="polite">
-            {isPanelOpen ? '' : 'Click a keyword or flag to explore'}
+            {isPanelOpen ? '' : 'Click a keyword, flag, or command fragment to explore'}
           </span>
         </div>
 

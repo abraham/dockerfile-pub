@@ -52,6 +52,16 @@ describe('tokenize', () => {
       expect(kwToken.explanationKey).toBe('RUN');
     });
 
+    it('sets explanation keys for non-whitespace RUN command fragments', () => {
+      const [line] = tokenize('RUN addgroup -S appgroup && adduser -S appuser -G appgroup');
+      const addgroupToken = line.tokens.find((t) => t.text === 'addgroup');
+      const flagToken = line.tokens.find((t) => t.text === '-S');
+      const andToken = line.tokens.find((t) => t.text === '&&');
+      expect(addgroupToken.explanationKey).toBe('RUN_CHUNK:addgroup');
+      expect(flagToken.explanationKey).toBe('RUN_CHUNK:-S');
+      expect(andToken.explanationKey).toBe('RUN_CHUNK:&&');
+    });
+
     it('recognises all documented INSTRUCTIONS', () => {
       for (const kw of INSTRUCTIONS) {
         const [line] = tokenize(`${kw} something`);
