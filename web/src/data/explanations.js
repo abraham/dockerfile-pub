@@ -46,6 +46,9 @@ const EXPLANATIONS = {
     details:
       'RUN executes commands during the image build. Each RUN creates a new layer. To keep ' +
       'images small, chain related commands with && and clean up in the same layer.\n\n' +
+      'Everything after RUN is the shell command. For example, RUN addgroup -S appgroup && ' +
+      'adduser -S appuser -G appgroup creates a system group named appgroup, then (only if that ' +
+      'succeeds) creates a system user named appuser in that group.\n\n' +
       'Use the --mount flag (BuildKit) to mount caches or secrets without writing them into the ' +
       'image layer.',
     syntax: 'RUN [--mount=<options>] <command>\nRUN ["executable", "param1", "param2"]',
