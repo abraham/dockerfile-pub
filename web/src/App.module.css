@@ -96,8 +96,7 @@
   flex: 1;
   min-height: 0;
   align-items: flex-start;
-  height: calc(100vh - var(--header-height) - 80px - var(--sp-8));
-  height: calc(100dvh - var(--header-height) - 80px - var(--sp-8));
+  height: calc(max(100vh, 100dvh) - var(--header-height) - 80px - var(--sp-8));
 }
 
 .workspacePanelOpen .viewerSection {
