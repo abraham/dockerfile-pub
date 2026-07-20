@@ -3,7 +3,7 @@ export const EXAMPLES = {
   simple: {
     label: 'Simple',
     description: 'A minimal Node.js web server image',
-    content: `FROM node:18-alpine
+    content: `FROM node:26-alpine
 WORKDIR /app
 COPY . .
 RUN npm install
@@ -14,7 +14,7 @@ CMD ["node", "server.js"]`,
   average: {
     label: 'Average',
     description: 'A multi-stage build producing a lean Nginx image',
-    content: `FROM node:18-alpine AS builder
+    content: `FROM node:26-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
@@ -33,7 +33,7 @@ CMD ["nginx", "-g", "daemon off;"]`,
     label: 'Complex',
     description: 'Production-grade multi-stage build with caching, security, and health checks',
     content: `# syntax=docker/dockerfile:1
-ARG NODE_VERSION=18
+ARG NODE_VERSION=26
 FROM node:\${NODE_VERSION}-alpine AS base
 WORKDIR /app
 ENV NODE_ENV=production

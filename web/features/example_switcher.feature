@@ -9,7 +9,7 @@ Feature: Example switcher
 
   Scenario: The Simple example is shown by default
     When I visit the home page
-    Then the Dockerfile viewer contains "node:18-alpine"
+    Then the Dockerfile viewer contains "node:26-alpine"
     And the Dockerfile viewer contains "CMD"
 
   Scenario: Switching to the Average example updates the Dockerfile
