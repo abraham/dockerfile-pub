@@ -51,6 +51,34 @@ The test suite covers:
 - **Unit tests** — tokenizer / parser and token → explanation mapping (`tokenizer.test.js`)
 - **UI tests** — example toggling, panel open/close, Escape key, documentation links (`App.test.jsx`, `SidePanel.test.jsx`)
 
+### Feature tests (end-to-end)
+
+The Cucumber/Puppeteer feature tests navigate a real browser to a running instance of the site.
+
+1. Start the dev server (or any target environment):
+
+   ```bash
+   npm run dev
+   ```
+
+2. In a second terminal, run the feature tests:
+
+   ```bash
+   npm run test:features
+   ```
+
+   By default the tests target `http://localhost:5173`. Set the `BASE_URL` environment variable to point the suite at a different environment:
+
+   ```bash
+   # staging
+   BASE_URL=https://staging.example.com npm run test:features
+
+   # production
+   BASE_URL=https://abraham.github.io/dockerfile-pub npm run test:features
+   ```
+
+   Every scenario that requires the site begins with `Given the site is up`, which performs a quick health-check request to `BASE_URL` before the browser steps run. If the server is not reachable the step fails with a clear error message.
+
 ### Lint
 
 ```bash
