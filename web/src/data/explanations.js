@@ -348,7 +348,7 @@ const EXPLANATIONS = {
     details:
       'Allows pulling a specific platform variant of a multi-arch image, regardless of the ' +
       "builder's native platform. Useful for cross-compilation or CI matrix builds.",
-    syntax: 'FROM --platform=linux/amd64 node:18',
+    syntax: 'FROM --platform=linux/amd64 node:26',
     links: [
       {
         label: 'Multi-platform builds',
