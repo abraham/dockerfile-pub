@@ -13,7 +13,7 @@
     "format": "prettier --write src"
   },
   "dependencies": {
-    "preact": "^10.19.3"
+    "preact": "^10.29.7"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.8.1",
