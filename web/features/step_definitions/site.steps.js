@@ -21,6 +21,10 @@ When('I visit the home page', async function () {
   await this.navigateTo('/');
 });
 
+Given('the viewport is {int} by {int}', async function (width, height) {
+  await this.page.setViewport({ width, height });
+});
+
 Then('the page title is {string}', async function (expectedTitle) {
   const title = await this.page.title();
   assert.equal(title, expectedTitle, `Expected page title "${expectedTitle}", got "${title}"`);
@@ -139,4 +143,34 @@ Then('the Dockerfile viewer contains {string}', async function (expectedText) {
     viewerText.includes(expectedText),
     `Expected the Dockerfile viewer to contain "${expectedText}"`,
   );
+});
+
+Then('the Dockerfile viewer content is visible', async function () {
+  const metrics = await this.page.$eval('[aria-label="Dockerfile source"]', (el) => {
+    const viewerRect = el.getBoundingClientRect();
+    const firstLine = el.querySelector('[data-line]');
+    const firstLineRect = firstLine?.getBoundingClientRect();
+    const style = getComputedStyle(el);
+
+    return {
+      display: style.display,
+      visibility: style.visibility,
+      viewerHeight: viewerRect.height,
+      clientHeight: el.clientHeight,
+      scrollHeight: el.scrollHeight,
+      hasFirstLine: Boolean(firstLine),
+      firstLineVisible:
+        Boolean(firstLineRect) &&
+        firstLineRect.bottom > viewerRect.top &&
+        firstLineRect.top < viewerRect.bottom,
+    };
+  });
+
+  assert.notEqual(metrics.display, 'none', 'Expected Dockerfile viewer display to not be none');
+  assert.notEqual(metrics.visibility, 'hidden', 'Expected Dockerfile viewer visibility to not be hidden');
+  assert.ok(metrics.viewerHeight > 0, 'Expected Dockerfile viewer to have visible height');
+  assert.ok(metrics.clientHeight > 0, 'Expected Dockerfile viewer to have positive clientHeight');
+  assert.ok(metrics.scrollHeight > 0, 'Expected Dockerfile viewer to contain scrollable content');
+  assert.ok(metrics.hasFirstLine, 'Expected Dockerfile viewer to render at least one line');
+  assert.ok(metrics.firstLineVisible, 'Expected at least one Dockerfile line to be visible in the viewer');
 });
