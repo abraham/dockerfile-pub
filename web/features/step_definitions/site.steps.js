@@ -25,3 +25,18 @@ Then('the page title is {string}', async function (expectedTitle) {
   const title = await this.page.title();
   assert.equal(title, expectedTitle, `Expected page title "${expectedTitle}", got "${title}"`);
 });
+
+Then('I should see the heading {string}', async function (expectedText) {
+  const headings = await this.page.$$eval('h1, h2, h3', (elements) =>
+    elements.map((el) => el.textContent.trim()),
+  );
+  assert.ok(
+    headings.some((h) => h === expectedText),
+    `Expected to find heading "${expectedText}" but found: [${headings.join(', ')}]`,
+  );
+});
+
+Then('I should see the text {string}', async function (expectedText) {
+  const bodyText = await this.page.evaluate(() => document.body.innerText);
+  assert.ok(bodyText.includes(expectedText), `Expected to find text "${expectedText}" on the page`);
+});
