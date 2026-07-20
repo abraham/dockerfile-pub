@@ -1,5 +1,4 @@
 import { getExplanation } from '../data/explanations';
-import { TOKEN_TYPE } from '../data/tokenizer';
 import styles from './DockerfileViewer.module.css';
 
 /**
@@ -48,9 +47,7 @@ export function DockerfileViewer({ lines, activeTokenId, onTokenClick }) {
  */
 function Token({ token, isActive, onTokenClick }) {
   const explanation = getExplanation(token.explanationKey);
-  const isInteractive =
-    explanation !== null &&
-    (token.type === TOKEN_TYPE.KEYWORD || token.type === TOKEN_TYPE.FLAG);
+  const isInteractive = explanation !== null;
 
   const className = [
     styles.token,
