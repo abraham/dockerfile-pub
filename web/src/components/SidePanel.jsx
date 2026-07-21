@@ -1,6 +1,42 @@
 import { useEffect, useRef } from 'preact/hooks';
 import styles from './SidePanel.module.css';
 
+function isListDetailBlock(block) {
+  const lines = block
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length < 2) return false;
+
+  return lines.every((line) => /^([-*]\s+.+)|(.+\s[—–-]\s.+)$/.test(line));
+}
+
+function renderDetailBlock(block, key) {
+  if (!isListDetailBlock(block)) {
+    return (
+      <p key={key} class={styles.para}>
+        {block}
+      </p>
+    );
+  }
+
+  const items = block
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  return (
+    <ul key={key} class={styles.detailList}>
+      {items.map((item) => (
+        <li key={item} class={styles.detailListItem}>
+          {item}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /**
  * Side panel that displays an explanation for the selected token.
  *
@@ -116,11 +152,7 @@ export function SidePanel({ token, isOpen, onClose }) {
           <div class={styles.body}>
             {explanation.details && (
               <div class={styles.section}>
-                {explanation.details.split('\n\n').map((para, i) => (
-                  <p key={i} class={styles.para}>
-                    {para}
-                  </p>
-                ))}
+                {explanation.details.split('\n\n').map((block, i) => renderDetailBlock(block, i))}
               </div>
             )}
 
