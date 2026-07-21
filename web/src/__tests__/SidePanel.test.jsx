@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/preact';
+import { render, screen, within } from '@testing-library/preact';
 import userEvent from '@testing-library/user-event';
 import { SidePanel } from '../components/SidePanel';
 
@@ -46,6 +46,26 @@ describe('SidePanel', () => {
     render(<SidePanel token={mockToken} isOpen={true} onClose={() => {}} />);
     expect(screen.getByText('Detail line one.')).toBeInTheDocument();
     expect(screen.getByText('Detail line two.')).toBeInTheDocument();
+  });
+
+  it('renders newline-separated mount type details as a list', () => {
+    const mountToken = {
+      ...mockToken,
+      explanation: {
+        ...mockToken.explanation,
+        details:
+          'type=cache — mounts a persistent cache directory.\n' +
+          'type=secret — exposes a secret.\n' +
+          'type=ssh — forwards an SSH agent socket.',
+      },
+    };
+
+    render(<SidePanel token={mountToken} isOpen={true} onClose={() => {}} />);
+
+    const firstItem = screen.getByText(/type=cache — mounts a persistent cache directory\./i);
+    const list = firstItem.closest('ul');
+    expect(list).toBeInTheDocument();
+    expect(within(list).getAllByRole('listitem')).toHaveLength(3);
   });
 
   it('renders the syntax block', () => {
