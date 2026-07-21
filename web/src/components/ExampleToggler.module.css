@@ -1,5 +1,6 @@
 .toggler {
   display: inline-flex;
+  position: relative;
   background: var(--c-surface-2);
   border: 1px solid var(--c-border);
   border-radius: var(--r-full);
@@ -7,7 +8,28 @@
   gap: 2px;
 }
 
+.indicator {
+  position: absolute;
+  top: 3px;
+  left: 0;
+  height: calc(100% - 6px);
+  background: var(--c-accent);
+  border-radius: var(--r-full);
+  transition:
+    transform var(--transition-base),
+    width var(--transition-base);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .indicator {
+    transition: none;
+  }
+}
+
 .button {
+  position: relative;
+  z-index: 1;
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   font-weight: 500;
@@ -18,19 +40,15 @@
   background: transparent;
   color: var(--c-muted);
   cursor: pointer;
-  transition:
-    background var(--transition-fast),
-    color var(--transition-fast);
+  transition: color var(--transition-fast);
   white-space: nowrap;
 }
 
 .button:hover {
-  background: var(--c-surface-3);
   color: var(--c-text-2);
 }
 
 .button.active {
-  background: var(--c-accent);
   color: #fff;
 }
 
