@@ -10,7 +10,6 @@
   top: 0;
   z-index: 10;
   background: var(--c-bg);
-  border-bottom: 1px solid var(--c-border);
   height: var(--header-height);
   display: flex;
   align-items: center;
@@ -152,7 +151,6 @@
 
 /* ── Footer ── */
 .footer {
-  border-top: 1px solid var(--c-border);
   padding: var(--sp-4) var(--sp-6);
   text-align: center;
 }
