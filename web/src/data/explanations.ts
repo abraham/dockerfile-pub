@@ -3,23 +3,22 @@
  * Maps instruction keywords and flag names to rich explanation objects.
  */
 
-/**
- * @typedef {Object} Link
- * @property {string} label
- * @property {string} url
- */
+export interface Link {
+  label: string;
+  url: string;
+}
 
-/**
- * @typedef {Object} Explanation
- * @property {string} title       - Display title
- * @property {string} short       - One-sentence summary
- * @property {string} details     - Longer explanation (plain text, newlines for paragraphs)
- * @property {string} [syntax]    - Syntax snippet
- * @property {Link[]} links       - Related documentation links
- */
+export interface Explanation {
+  title: string;
+  /** One-sentence summary */
+  short: string;
+  /** Longer explanation (plain text, `\n\n` between paragraphs) */
+  details: string;
+  syntax?: string;
+  links: Link[];
+}
 
-/** @type {Record<string, Explanation>} */
-const EXPLANATIONS = {
+const EXPLANATIONS: Record<string, Explanation> = {
   // ─── Instruction keywords ────────────────────────────────────────────────
 
   FROM: {
@@ -439,12 +438,8 @@ const EXPLANATIONS = {
   },
 };
 
-/**
- * Look up an explanation by its key.
- * @param {string|null} key
- * @returns {Explanation|null}
- */
-export function getExplanation(key) {
+/** Look up an explanation by its key. */
+export function getExplanation(key: string | null): Explanation | null {
   if (!key) return null;
   if (key.startsWith('RUN_CHUNK:')) {
     return buildRunChunkExplanation(key.slice('RUN_CHUNK:'.length));
@@ -452,11 +447,7 @@ export function getExplanation(key) {
   return EXPLANATIONS[key] ?? null;
 }
 
-/**
- * @param {string} chunk
- * @returns {Explanation|null}
- */
-function buildRunChunkExplanation(chunk) {
+function buildRunChunkExplanation(chunk: string): Explanation | null {
   if (!chunk) return null;
 
   if (isRunControlOperator(chunk)) {
@@ -497,7 +488,6 @@ function buildRunChunkExplanation(chunk) {
   };
 }
 
-/** @param {string} chunk */
-function isRunControlOperator(chunk) {
+function isRunControlOperator(chunk: string): boolean {
   return chunk === '&&' || chunk === '||' || chunk === ';' || chunk === '|';
 }

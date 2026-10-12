@@ -49,10 +49,10 @@ flowchart LR
 | 5   | Lint (JS, CSS, Markdown)     | `npm run lint`: ESLint on `web/`, Stylelint on `web/src/**/*.css`, markdownlint on every `*.md` (ARCH-27) | Any error or warning                                              |
 | 6   | Lint workflows               | `docker run … rhysd/actionlint:1.7.12@sha256:…` from the repo root                                        | Any actionlint or shellcheck finding in `.github/workflows/`      |
 | 7   | Check formatting             | `npm run format:check` (Prettier over the whole repo except `.prettierignore`)                            | Any file differs from Prettier's output                           |
-| 8   | Type-check                   | `npm run typecheck` (`tsc -p jsconfig.json`, strict, ARCH-6)                                              | Any type error                                                    |
+| 8   | Type-check                   | `npm run typecheck` (`tsc`, strict, ARCH-6)                                                               | Any type error                                                    |
 | 9   | Unit / component tests       | `npm run test:run` (Vitest)                                                                               | Any test fails                                                    |
 | 10  | Build                        | `npm run build`                                                                                           | Vite build fails                                                  |
-| 11  | Check bundle size            | `npm run size` (`scripts/check-size.js`, ARCH-15)                                                         | Gzipped JS > 20 KB, gzipped CSS > 5 KB, or no JS in `dist/assets` |
+| 11  | Check bundle size            | `npm run size` (`scripts/check-size.ts`, ARCH-15)                                                         | Gzipped JS > 20 KB, gzipped CSS > 5 KB, or no JS in `dist/assets` |
 | 12  | Feature tests                | See §2.3                                                                                                  | Server never responds, or any scenario fails                      |
 | 13  | Upload artifacts             | `actions/upload-artifact@v7`, runs only `if: failure()`                                                   | —                                                                 |
 
@@ -73,7 +73,7 @@ npm run test:features
 - **WF-7** The step serves `dist/` with `vite preview` in the background on `127.0.0.1:4173`. `--strictPort` makes it fail rather than silently move to another port. The log goes to `/tmp/vite-preview.log`.
 - **WF-8** It polls the server for up to 30 seconds. The second `curl --fail`, outside the loop, makes the step fail with a clear error if the server never came up, instead of letting Cucumber fail later with confusing errors.
 - **WF-9** **Exit codes must propagate.** `npm run test:features` is the last command, so its exit code is the step's exit code. The `trap` kills the preview server on any exit. Any future wrapper around Cucumber (a script, `shell.exec` or similar) must preserve a non-zero exit code; otherwise CI will report green on failures.
-- **WF-10** Environment: `BASE_URL=http://127.0.0.1:4173`. Screenshots of failed scenarios go to `FEATURE_ARTIFACTS_DIR=/tmp/feature-test-artifacts` (see `features/support/hooks.js`).
+- **WF-10** Environment: `BASE_URL=http://127.0.0.1:4173`. Screenshots of failed scenarios go to `FEATURE_ARTIFACTS_DIR=/tmp/feature-test-artifacts` (see `features/support/hooks.ts`).
 - **WF-11** When any step fails, the screenshots and `/tmp/vite-preview.log` are uploaded as the `feature-test-artifacts` artifact. A missing path is ignored, so this upload never hides the original failure.
 
 ### 2.4 Other rules
@@ -153,7 +153,7 @@ Every job sets `timeout-minutes: 10` (WF-14).
   **Required:** pin any non-`actions/*` action added later to a full commit SHA, with a version comment.
 - **WF-30 No secrets.** Neither workflow uses repository secrets. Pages deployment authenticates with OIDC (`id-token: write`).
   **Required:** any future secret is used only in jobs that never run untrusted PR code, so never under `pull_request` from forks.
-- **WF-31 One Node version.** [web/.nvmrc](../../web/.nvmrc) is the single source (currently `22`). Both workflows read it with `node-version-file`, and `package.json` declares `engines: { node: ">=22" }`. To upgrade Node, change `.nvmrc` and, if needed, the `engines` lower bound.
+- **WF-31 One Node version.** [web/.nvmrc](../../web/.nvmrc) is the single source (currently `22`, which `setup-node` resolves to the latest 22.x). Both workflows read it with `node-version-file`, and `package.json` declares `engines: { node: ">=22.18" }`. 22.18 is the first 22.x release that strips TypeScript types without a flag, which `scripts/check-size.ts` and the Cucumber steps rely on (ARCH-6). To upgrade Node, change `.nvmrc` and, if needed, the `engines` lower bound.
 - **WF-32 Workflow names are API.** The `workflow_run` fallback in WF-23 would refer to `CI` by name, and branch protection refers to the `test` check by name. Renaming either requires updating those references in the same change.
 
 ## 6. Settings outside the repo

@@ -4,7 +4,6 @@
  * each containing an array of Token objects.
  */
 
-/** @enum {string} */
 export const TOKEN_TYPE = {
   KEYWORD: 'keyword',
   FLAG: 'flag',
@@ -12,18 +11,21 @@ export const TOKEN_TYPE = {
   VARIABLE: 'variable',
   COMMENT: 'comment',
   TEXT: 'text',
-};
+} as const;
 
-/** @enum {string} */
+export type TokenType = (typeof TOKEN_TYPE)[keyof typeof TOKEN_TYPE];
+
 export const LINE_TYPE = {
   BLANK: 'blank',
   COMMENT: 'comment',
   INSTRUCTION: 'instruction',
   CONTINUATION: 'continuation',
-};
+} as const;
+
+export type LineType = (typeof LINE_TYPE)[keyof typeof LINE_TYPE];
 
 /** All valid Dockerfile instruction keywords */
-export const INSTRUCTIONS = new Set([
+export const INSTRUCTIONS: ReadonlySet<string> = new Set([
   'ADD',
   'ARG',
   'CMD',
@@ -44,41 +46,33 @@ export const INSTRUCTIONS = new Set([
   'WORKDIR',
 ]);
 
-/**
- * @typedef {Object} Token
- * @property {string} id            - Unique token id (e.g. "3-1")
- * @property {string} text          - Raw text of the token
- * @property {string} type          - One of TOKEN_TYPE values
- * @property {number} lineIndex     - Zero-based line index
- * @property {number} tokenIndex    - Zero-based token index within the line
- * @property {string|null} explanationKey - Key for looking up an explanation (null if none)
- */
+export interface Token {
+  /** Unique token id, `"<lineIndex>-<tokenIndex>"` */
+  id: string;
+  text: string;
+  type: TokenType;
+  lineIndex: number;
+  tokenIndex: number;
+  /** Key for looking up an explanation (null if none) */
+  explanationKey: string | null;
+}
 
-/**
- * @typedef {Object} Line
- * @property {number} lineIndex   - Zero-based line index
- * @property {string} raw         - Original line text
- * @property {string} type        - One of LINE_TYPE values
- * @property {string|null} keyword - Instruction keyword if applicable
- * @property {Token[]} tokens     - Ordered array of tokens
- */
+export interface Line {
+  lineIndex: number;
+  /** Original line text */
+  raw: string;
+  type: LineType;
+  /** Instruction keyword if applicable */
+  keyword: string | null;
+  tokens: Token[];
+}
 
-/**
- * Parse a Dockerfile string into an array of Line objects.
- * @param {string} dockerfileText
- * @returns {Line[]}
- */
-export function tokenize(dockerfileText) {
+/** Parse a Dockerfile string into an array of Line objects. */
+export function tokenize(dockerfileText: string): Line[] {
   return dockerfileText.split('\n').map((raw, lineIndex) => parseLine(raw, lineIndex));
 }
 
-/**
- * Parse a single raw line into a Line object.
- * @param {string} raw
- * @param {number} lineIndex
- * @returns {Line}
- */
-function parseLine(raw, lineIndex) {
+function parseLine(raw: string, lineIndex: number): Line {
   const trimmed = raw.trimStart();
 
   if (!trimmed) {
@@ -109,7 +103,7 @@ function parseLine(raw, lineIndex) {
     const indent = raw.slice(0, raw.length - trimmed.length);
 
     let tokenIndex = 0;
-    const tokens = [];
+    const tokens: Token[] = [];
 
     if (indent) {
       tokens.push(
@@ -146,16 +140,14 @@ function parseLine(raw, lineIndex) {
   return { lineIndex, raw, type: LINE_TYPE.CONTINUATION, keyword: null, tokens: contTokens };
 }
 
-/**
- * Break the argument portion of a line into tokens.
- * @param {string} text
- * @param {number} lineIndex
- * @param {number} startIndex
- * @param {string|null} instructionKeyword
- * @returns {Token[]}
- */
-function tokenizeArgs(text, lineIndex, startIndex, instructionKeyword) {
-  const tokens = [];
+/** Break the argument portion of a line into tokens. */
+function tokenizeArgs(
+  text: string,
+  lineIndex: number,
+  startIndex: number,
+  instructionKeyword: string | null,
+): Token[] {
+  const tokens: Token[] = [];
   let idx = startIndex;
   let remaining = text;
 
@@ -216,27 +208,22 @@ function tokenizeArgs(text, lineIndex, startIndex, instructionKeyword) {
   return tokens;
 }
 
-/**
- * @param {string} chunkText
- * @param {string|null} instructionKeyword
- * @returns {string|null}
- */
-function getChunkExplanationKey(chunkText, instructionKeyword) {
+function getChunkExplanationKey(
+  chunkText: string,
+  instructionKeyword: string | null,
+): string | null {
   if (instructionKeyword !== 'RUN') return null;
   if (!chunkText.trim()) return null;
   return `RUN_CHUNK:${chunkText}`;
 }
 
-/**
- * Factory helper to create a Token object.
- * @param {string} id
- * @param {string} text
- * @param {string} type
- * @param {number} lineIndex
- * @param {number} tokenIndex
- * @param {string|null} explanationKey
- * @returns {Token}
- */
-function makeToken(id, text, type, lineIndex, tokenIndex, explanationKey) {
+function makeToken(
+  id: string,
+  text: string,
+  type: TokenType,
+  lineIndex: number,
+  tokenIndex: number,
+  explanationKey: string | null,
+): Token {
   return { id, text, type, lineIndex, tokenIndex, explanationKey };
 }

@@ -3,9 +3,9 @@
 |                 |                                                                                                                                                                                  |
 | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Status**      | Draft. Describes current behaviour; deviations and open questions are flagged inline.                                                                                            |
-| **Source**      | [web/src/data/explanations.js](../../web/src/data/explanations.js)                                                                                                               |
-| **Rendered by** | [SidePanel.jsx](../../web/src/components/SidePanel.jsx) (panel), `Token` in [DockerfileViewer.jsx](../../web/src/components/DockerfileViewer.jsx) (tooltip and accessible name)  |
-| **Tests**       | [SidePanel.test.jsx](../../web/src/__tests__/SidePanel.test.jsx), [App.test.jsx](../../web/src/__tests__/App.test.jsx); there are no direct unit tests for `explanations.js` yet |
+| **Source**      | [web/src/data/explanations.ts](../../web/src/data/explanations.ts)                                                                                                               |
+| **Rendered by** | [SidePanel.tsx](../../web/src/components/SidePanel.tsx) (panel), `Token` in [DockerfileViewer.tsx](../../web/src/components/DockerfileViewer.tsx) (tooltip and accessible name)  |
+| **Tests**       | [SidePanel.test.tsx](../../web/src/__tests__/SidePanel.test.tsx), [App.test.tsx](../../web/src/__tests__/App.test.tsx); there are no direct unit tests for `explanations.ts` yet |
 | **Related**     | [tokenizer.md](./tokenizer.md) (where keys come from), [run-command-explanations.md](./run-command-explanations.md) (generated entries)                                          |
 
 ## 1. Purpose
@@ -14,9 +14,19 @@ This spec defines the shape, key namespace, authoring rules and rendering contra
 
 ## 2. Schema
 
-```js
-/** @typedef {{ label: string, url: string }} Link */
-/** @typedef {{ title: string, short: string, details: string, syntax?: string, links: Link[] }} Explanation */
+```ts
+interface Link {
+  label: string;
+  url: string;
+}
+
+interface Explanation {
+  title: string;
+  short: string;
+  details: string;
+  syntax?: string;
+  links: Link[];
+}
 ```
 
 | Field           | Required                                                        | Constraint                                                                                                               | Rendered as                                                                                                         |
@@ -139,12 +149,12 @@ Audit results:
 | ------------------------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | EXP-5 text-only rendering            | ❌         | Render an explanation whose `details` contains `<img src=x onerror=…>`; assert it appears as literal text and no `img` element exists |
 | EXP-7 optional sections omitted      | ❌         | Panel test with no `syntax` / empty `links`; assert no "Syntax" / "Learn more" heading                                                |
-| EXP-10–12 lookup                     | ❌         | New `explanations.test.js`: `null`, `''`, unknown key → `null`; known key → entry                                                     |
+| EXP-10–12 lookup                     | ❌         | New `explanations.test.ts`: `null`, `''`, unknown key → `null`; known key → entry                                                     |
 | EXP-13 prototype keys                | ❌         | `getExplanation('constructor')` → `null` (fails today)                                                                                |
-| EXP-16 list blocks                   | ✅         | `SidePanel.test.jsx` › "renders newline-separated mount type details as a list"                                                       |
+| EXP-16 list blocks                   | ✅         | `SidePanel.test.tsx` › "renders newline-separated mount type details as a list"                                                       |
 | EXP-16 prose not misdetected         | ❌         | Single-line block with `-` → `<p>`; mixed block (one list line, one prose line) → `<p>`                                               |
-| EXP-17 paragraphs                    | ✅         | `SidePanel.test.jsx` › "renders detail paragraphs"                                                                                    |
+| EXP-17 paragraphs                    | ✅         | `SidePanel.test.tsx` › "renders detail paragraphs"                                                                                    |
 | EXP-1–4 schema rules for every entry | ❌         | Table-driven test over every static key (export the map or its keys for testing)                                                      |
 | EXP-19 instruction coverage          | ❌         | `for (kw of INSTRUCTIONS) expect(getExplanation(kw)).not.toBeNull()`                                                                  |
 | EXP-20 example coverage              | ❌         | Tokenize every `EXAMPLES` entry; every non-`RUN_CHUNK:` key resolves or is allow-listed (fails today on `--omit`)                     |
-| Links open safely                    | ✅ partial | `SidePanel.test.jsx` checks `target="_blank"`; add an assertion for `rel="noopener noreferrer"`                                       |
+| Links open safely                    | ✅ partial | `SidePanel.test.tsx` checks `target="_blank"`; add an assertion for `rel="noopener noreferrer"`                                       |

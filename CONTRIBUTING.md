@@ -13,18 +13,18 @@ npm test          # watch mode
 npm run test:features  # run end-to-end feature tests (requires dev server)
 npm run lint      # ESLint, Stylelint and markdownlint
 npm run format    # Prettier over the whole repo
-npm run typecheck # type-check JSDoc types
+npm run typecheck # type-check with tsc
 npm run build     # production bundle in web/dist/
 npm run size      # bundle-size budget (after build)
 ```
 
 ## Adding a new Dockerfile example
 
-1. Open `web/src/data/examples.js`.
+1. Open `web/src/data/examples.ts`.
 2. Add a new entry to the `EXAMPLES` object. The key becomes the URL-safe identifier.
 
-   ```js
-   // web/src/data/examples.js
+   ```ts
+   // web/src/data/examples.ts
    export const EXAMPLES = {
      // …existing entries…
      myExample: {
@@ -42,9 +42,9 @@ npm run size      # bundle-size budget (after build)
 
 ## Adding or updating an explanation
 
-Explanations live in `web/src/data/explanations.js`. Each entry maps a **Dockerfile instruction keyword** or a **flag name** to an object:
+Explanations live in `web/src/data/explanations.ts`. Each entry maps a **Dockerfile instruction keyword** or a **flag name** to an `Explanation` object:
 
-```js
+```ts
 KEYWORD_OR_FLAG: {
   title: 'KEYWORD',          // displayed in the panel heading
   short: 'One-sentence summary shown as a tooltip on hover.',
@@ -67,10 +67,10 @@ Guidelines:
 
 ## Tokenizer
 
-The tokenizer in `web/src/data/tokenizer.js` converts Dockerfile text into `Line` and `Token` objects. If you encounter a valid Dockerfile construct that is not tokenised correctly:
+The tokenizer in `web/src/data/tokenizer.ts` converts Dockerfile text into `Line` and `Token` objects. If you encounter a valid Dockerfile construct that is not tokenised correctly:
 
-1. Add a failing test in `web/src/__tests__/tokenizer.test.js` that describes the expected output.
-2. Fix `tokenizeLine` or `tokenizeArgs` in `tokenizer.js`.
+1. Add a failing test in `web/src/__tests__/tokenizer.test.ts` that describes the expected output.
+2. Fix `parseLine` or `tokenizeArgs` in `tokenizer.ts`.
 3. Verify all existing tests still pass: `npm run test:run`.
 
 ## Pull request checklist
@@ -88,7 +88,8 @@ The tokenizer in `web/src/data/tokenizer.js` converts Dockerfile text into `Line
 ## Code style
 
 - **Formatting** — Prettier is configured in the root `.prettierrc` and formats everything except generated files (`.prettierignore`), including Markdown, YAML and `.feature` files. Run `npm run format` from `web/` to auto-format.
-- **Linting** — `npm run lint` runs ESLint on all JS in `web/` (with `eslint-plugin-react` and `eslint-plugin-react-hooks`; no `react/prop-types` requirement, since this is a Preact project), Stylelint on CSS and markdownlint on every Markdown file. CI also runs `actionlint` on the workflows (run `actionlint` locally from the repo root if you have it).
+- **Linting** — `npm run lint` runs ESLint on all TypeScript in `web/` (typescript-eslint's type-aware rules, plus `eslint-plugin-react` and `eslint-plugin-react-hooks`; no `react/prop-types` requirement, since this is a Preact project), Stylelint on CSS and markdownlint on every Markdown file. CI also runs `actionlint` on the workflows (run `actionlint` locally from the repo root if you have it).
+- **TypeScript** — all source is TypeScript (`.tsx` for components, `.ts` otherwise). Use only erasable syntax: no `enum`, `namespace` or constructor parameter properties, so Node can run the scripts and Cucumber steps directly. Use `import type` for type-only imports.
 - **CSS** — CSS Modules for component styles; global design tokens in `web/src/styles/global.css`.
 - **No new dependencies** unless strictly necessary. The bundle must stay small.
 

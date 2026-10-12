@@ -1,5 +1,10 @@
-/** @type {Record<string, { label: string; description: string; content: string }>} */
-export const EXAMPLES = {
+export interface Example {
+  label: string;
+  description: string;
+  content: string;
+}
+
+export const EXAMPLES: Record<string, Example> = {
   simple: {
     label: 'Simple',
     description: 'A minimal Node.js web server image',

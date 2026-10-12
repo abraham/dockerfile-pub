@@ -6,13 +6,12 @@ import { CopyButton } from './components/CopyButton';
 import { tokenize } from './data/tokenizer';
 import { EXAMPLES } from './data/examples';
 import { getExplanation } from './data/explanations';
+import type { ResolvedToken } from './components/DockerfileViewer';
 import styles from './App.module.css';
-
-/** @typedef {import('./components/DockerfileViewer').ResolvedToken} ResolvedToken */
 
 const EXAMPLE_KEYS = Object.keys(EXAMPLES);
 
-function loadSavedExample() {
+function loadSavedExample(): string {
   try {
     const saved = localStorage.getItem('df-example');
     if (saved && EXAMPLE_KEYS.includes(saved)) return saved;
@@ -24,7 +23,7 @@ function loadSavedExample() {
 
 export function App() {
   const [activeExample, setActiveExample] = useState(loadSavedExample);
-  const [activeToken, setActiveToken] = useState(/** @type {ResolvedToken | null} */ (null));
+  const [activeToken, setActiveToken] = useState<ResolvedToken | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   const lines = useMemo(
@@ -39,7 +38,7 @@ export function App() {
     [activeExample],
   );
 
-  const handleTokenClick = useCallback((/** @type {ResolvedToken} */ token) => {
+  const handleTokenClick = useCallback((token: ResolvedToken) => {
     if (!token.explanation) return;
     setActiveToken(token);
     setIsPanelOpen(true);
@@ -49,7 +48,7 @@ export function App() {
     setIsPanelOpen(false);
   }, []);
 
-  const handleExampleChange = useCallback((/** @type {string} */ key) => {
+  const handleExampleChange = useCallback((key: string) => {
     setActiveExample(key);
     setIsPanelOpen(false);
     setActiveToken(null);

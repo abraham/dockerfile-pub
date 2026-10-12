@@ -1,9 +1,10 @@
 default:
   paths:
     - features/**/*.feature
-  require:
-    - features/support/**/*.js
-    - features/step_definitions/**/*.js
+  # .ts files are loaded with Node's built-in type stripping (Node >= 22.18).
+  import:
+    - features/support/**/*.ts
+    - features/step_definitions/**/*.ts
   format:
     - progress-bar
     - summary
@@ -12,9 +13,9 @@ default:
 smoke:
   paths:
     - features/site.feature
-  require:
-    - features/support/**/*.js
-    - features/step_definitions/**/*.js
+  import:
+    - features/support/**/*.ts
+    - features/step_definitions/**/*.ts
   format:
     - progress-bar
     - summary
