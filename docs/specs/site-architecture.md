@@ -135,7 +135,9 @@ flowchart TD
   | CSS   | 12.2 KB | 3.2 KB  | 2026-10-11                             |
   | HTML  | 0.8 KB  | 0.5 KB  | 2026-10-11 (includes the CSP meta tag) |
 
-  > ✅ **Enforced in CI.** [scripts/check-size.ts](../../web/scripts/check-size.ts) (`npm run size`, run after Build in `ci.yml`) fails if the gzipped JS total exceeds **20 KB** or the gzipped CSS total exceeds **5 KB**. It also fails if `dist/assets` contains no JS. That leaves room to add content without letting a framework-sized dependency slip in. The README cites the same numbers.
+  > ✅ **Enforced in CI.** [scripts/check-size.ts](../../web/scripts/check-size.ts) (`npm run size`, run after Build in `ci.yml`) fails if the gzipped JS total exceeds **28 KB** or the gzipped CSS total exceeds **5 KB**. It also fails if `dist/assets` contains no JS. The README cites the same numbers.
+  >
+  > The JS budget was raised from 20 KB to 28 KB on 2026-10-12 (D15). That makes room for the target tokenizer, the explanation content (EXP-41, at most 8 KB) and the command catalog (CMDX-20, at most 4 KB) while still catching a framework-sized dependency.
 
 - **ARCH-16 Runtime work.** Tokenizing and `getExplanation` both run once per token per example switch (memoised, ARCH-4). Both are O(n) in the example size. No virtualisation is needed.
 
@@ -285,6 +287,7 @@ Treat this as a new spec, not an extension of an existing one.
 | D12 | Explanations are resolved in `App` and attached to tokens; components never import `src/data`                       | One lookup per token per example switch; clear layer boundary                                                                                          | Accepted; see ARCH-2                                |
 | D13 | Automated accessibility checks run in the E2E layer (axe-core), not in jsdom                                        | jsdom cannot compute real colours, layout or target sizes                                                                                              | Accepted 2026-10-11; see ARCH-29                    |
 | D14 | No `CNAME` file; the Pages setting plus this spec are the record of the custom domain                               | GitHub ignores `CNAME` for Actions deployments                                                                                                         | Accepted 2026-10-11; see ARCH-23                    |
+| D15 | JS budget raised from 20 KB to 28 KB gzipped; content stays bundled, not lazy-loaded                                | Keeps explanation lookup synchronous with no loading states, while fitting the target tokenizer, content and command catalog                           | Accepted 2026-10-12; see ARCH-15, EXP-41, CMDX-20   |
 
 ## 12. Verification checklist
 

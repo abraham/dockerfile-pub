@@ -52,7 +52,7 @@ flowchart LR
 | 8   | Type-check                   | `npm run typecheck` (`tsc`, strict, ARCH-6)                                                               | Any type error                                                    |
 | 9   | Unit / component tests       | `npm run test:run` (Vitest)                                                                               | Any test fails                                                    |
 | 10  | Build                        | `npm run build`                                                                                           | Vite build fails                                                  |
-| 11  | Check bundle size            | `npm run size` (`scripts/check-size.ts`, ARCH-15)                                                         | Gzipped JS > 20 KB, gzipped CSS > 5 KB, or no JS in `dist/assets` |
+| 11  | Check bundle size            | `npm run size` (`scripts/check-size.ts`, ARCH-15)                                                         | Gzipped JS > 28 KB, gzipped CSS > 5 KB, or no JS in `dist/assets` |
 | 12  | Feature tests                | See §2.3                                                                                                  | Server never responds, or any scenario fails                      |
 | 13  | Upload artifacts             | `actions/upload-artifact@v7`, runs only `if: failure()`                                                   | —                                                                 |
 

@@ -6,7 +6,7 @@ import { gzipSync } from 'node:zlib';
 type AssetExt = '.js' | '.css';
 
 // Gzipped budgets in bytes (ARCH-15).
-const BUDGETS: Record<AssetExt, number> = { '.js': 20 * 1024, '.css': 5 * 1024 };
+const BUDGETS: Record<AssetExt, number> = { '.js': 28 * 1024, '.css': 5 * 1024 };
 const EXTS = Object.keys(BUDGETS) as AssetExt[];
 const assetsDir = fileURLToPath(new URL('../dist/assets/', import.meta.url));
 
