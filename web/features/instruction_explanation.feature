@@ -60,3 +60,4 @@ Feature: Instruction explanation
     And I click the "ENTRYPOINT" instruction
     Then the explanation panel is pinned to the bottom of the viewport
     And the "ENTRYPOINT" token is above the explanation panel
+    And the last line of the Dockerfile can be scrolled above the explanation panel

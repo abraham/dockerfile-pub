@@ -111,7 +111,7 @@ npm run build
 npm run size   # fails if the bundle exceeds its budget
 ```
 
-Outputs a static bundle to `web/dist/`. The production build is ~117 KB JS and ~13 KB CSS before gzip (~38 KB and ~3 KB gzipped). `npm run size` fails if gzipped JS exceeds 40 KB or gzipped CSS exceeds 5 KB.
+Outputs a static bundle to `web/dist/`. The production build is ~121 KB JS and ~14 KB CSS before gzip (~40 KB and ~4 KB gzipped). `npm run size` fails if gzipped JS exceeds 40 KB or gzipped CSS exceeds 5 KB.
 
 ### Preview production build
 

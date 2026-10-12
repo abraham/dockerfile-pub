@@ -73,7 +73,8 @@ export function App() {
     const entry = entryFor(ref, explanation);
     setPanel((prev) => {
       if (!prev || prev.stack[prev.stack.length - 1].key === entry.key) return prev;
-      return { ...prev, stack: [...prev.stack, entry].slice(-MAX_STACK) };
+      const [own, ...rest] = [...prev.stack, entry];
+      return { ...prev, stack: [own, ...rest.slice(1 - MAX_STACK)] };
     });
   }, []);
 
