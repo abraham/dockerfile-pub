@@ -32,7 +32,7 @@ npm install
 ### Develop
 
 ```bash
-npm run dev
+npm start   # or: npm run dev
 ```
 
 Opens the app at `http://localhost:5173/` with hot module replacement.
