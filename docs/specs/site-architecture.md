@@ -34,18 +34,18 @@ flowchart LR
 | `web/`                                                  | The whole app. All npm scripts run from here.                                                                                   |
 | `web/index.html`                                        | Vite entry HTML. Contains `<div id="root">`, the meta description and the favicon link.                                         |
 | `web/public/`                                           | Static files copied to `dist/` unchanged (`favicon.svg`).                                                                       |
-| `web/src/main.jsx`                                      | Bootstrap: imports `global.css` and renders `<App />` into `#root`.                                                             |
-| `web/src/App.jsx`                                       | The only stateful component: holds state and lays out the page.                                                                 |
+| `web/src/main.tsx`                                      | Bootstrap: imports `global.css` and renders `<App />` into `#root`.                                                             |
+| `web/src/App.tsx`                                       | The only stateful component: holds state and lays out the page.                                                                 |
 | `web/src/components/`                                   | UI components, one `.module.css` per component.                                                                                 |
-| `web/src/data/`                                         | Pure JS: tokenizer, explanations, examples. Has no Preact imports.                                                              |
+| `web/src/data/`                                         | Pure TypeScript: tokenizer, explanations, examples. Has no Preact imports.                                                      |
 | `web/src/styles/global.css`                             | Design tokens, reset and base element styles.                                                                                   |
-| `web/src/__tests__/`                                    | Vitest unit and component tests. `setup.js` holds shared test setup.                                                            |
+| `web/src/__tests__/`                                    | Vitest unit and component tests. `setup.ts` holds shared test setup.                                                            |
 | `web/features/`                                         | Cucumber + Puppeteer end-to-end tests.                                                                                          |
-| `web/scripts/check-size.js`                             | Bundle-size budget check (`npm run size`, ARCH-15).                                                                             |
-| `web/jsconfig.json`                                     | Type-checking config for the JSDoc types (`npm run typecheck`, ARCH-6).                                                         |
+| `web/scripts/check-size.ts`                             | Bundle-size budget check (`npm run size`, ARCH-15).                                                                             |
+| `web/tsconfig.json`                                     | TypeScript config for every `.ts`/`.tsx` file in `web/` (`npm run typecheck`, ARCH-6).                                          |
 | `web/.nvmrc`                                            | The Node version used by CI and deploy (WF-31).                                                                                 |
 | `web/cucumber.yml`                                      | Cucumber profiles: `default` and `smoke` (ARCH-18).                                                                             |
-| `web/eslint.config.js`, `web/.stylelintrc.json`         | JS and CSS lint config (§8).                                                                                                    |
+| `web/eslint.config.ts`, `web/.stylelintrc.json`         | TypeScript and CSS lint config (§8).                                                                                            |
 | `.prettierrc`, `.prettierignore`, `.markdownlint.jsonc` | Repo-wide format and Markdown lint config (§8). They live at the root so they apply to `README.md`, `docs/` and `.github/` too. |
 | `.github/workflows/`                                    | `ci.yml` (verify) and `deploy.yml` (publish).                                                                                   |
 | `docs/specs/`                                           | These specs. This file is the source of truth for architecture; the README links here instead of repeating it.                  |
@@ -56,7 +56,7 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-  main[main.jsx] --> App[App.jsx]
+  main[main.tsx] --> App[App.tsx]
   main --> gcss[global.css]
   App --> ET[ExampleToggler]
   App --> DV[DockerfileViewer]
@@ -86,10 +86,14 @@ flowchart TD
 ### 3.2 Framework
 
 - **ARCH-5 Preact 10, not React.** Chosen to keep the bundle small (see §6). Code uses `preact/hooks` and Preact's native `class` attribute. ESLint's React rules are configured for this (`react/no-unknown-property` ignores `class` and `for`; `react/prop-types` is off).
-- **ARCH-6 JavaScript with JSDoc types, not TypeScript source.** Types are written as JSDoc (`@typedef`, `@param`) and checked by `tsc` with `checkJs` ([jsconfig.json](../../web/jsconfig.json), `npm run typecheck`, run in CI). TypeScript is a dev dependency only and never ships in the bundle.
-  - Scope: all of `src/`, including `src/__tests__/`, with `strict: true`. Test files get Vitest globals and the jest-dom matcher types (`vitest/globals`, `@testing-library/jest-dom/vitest`).
-  - The shared `ResolvedToken` type (a token plus its explanation, ARCH-2) is defined in `DockerfileViewer.jsx` and imported by `App` and `SidePanel` through `import()` types.
-  - Prefer typed `useRef(/** @type {T | null} */ (null))` and narrow with `?.` over non-null casts. The only cast in app code is `#root` in `main.jsx`, which `index.html` guarantees exists.
+- **ARCH-6 TypeScript everywhere.** Every source file in `web/` is TypeScript: `.tsx` for components and `.ts` for everything else, including tests, Cucumber steps, scripts and the Vite and ESLint configs. There are no `.js` source files. TypeScript is a dev dependency only and never ships in the bundle.
+  - One [tsconfig.json](../../web/tsconfig.json) covers `src/`, `features/`, `scripts/` and the root config files. It uses `strict`, `noEmit`, `isolatedModules`, `verbatimModuleSyntax` and `erasableSyntaxOnly`. `npm run typecheck` (`tsc`) runs in CI.
+  - **Erasable syntax only:** no `enum`, `namespace` or constructor parameter properties. This lets Node run `.ts` files directly through its built-in type stripping, used by `node scripts/check-size.ts` and by Cucumber loading `features/**/*.ts`, with no build step or loader. That requires Node 22.18 or later (WF-31). Use `as const` objects plus derived union types instead of enums (e.g. `TOKEN_TYPE` / `TokenType`).
+  - `verbatimModuleSyntax` means type-only imports must use `import type`. This also guarantees that side-effect imports are never silently dropped.
+  - Vite (app and Vitest) and ESLint (via `jiti`) compile TypeScript themselves; `tsc` only checks types.
+  - TypeScript is pinned to `~6.0`. typescript-eslint does not yet support the native TypeScript 7 compiler, which has no JS API. Upgrade both together.
+  - The shared `ResolvedToken` type (a token plus its explanation, ARCH-2) is exported from `DockerfileViewer.tsx` and imported with `import type` by `App` and `SidePanel`.
+  - Prefer typed refs (`useRef<HTMLElement>(null)`) and narrowing with `?.` over non-null assertions. The only cast in app code is `#root` in `main.tsx`, which `index.html` guarantees exists. Cucumber's world declares `browser!`/`page!`, because the `@browser` hook sets them before any step runs.
 
 ## 4. Styling
 
@@ -115,7 +119,7 @@ flowchart TD
 
 ## 5. Build
 
-- **ARCH-13 Vite** with `@preact/preset-vite`. The config ([vite.config.js](../../web/vite.config.js)) also holds the Vitest config and a small build-only plugin that injects the CSP (ARCH-24). No `base`, `build.target` or chunking options are set, so Vite's defaults apply:
+- **ARCH-13 Vite** with `@preact/preset-vite`. The config ([vite.config.ts](../../web/vite.config.ts)) also holds the Vitest config and a small build-only plugin that injects the CSP (ARCH-24). No `base`, `build.target` or chunking options are set, so Vite's defaults apply:
   - `base: '/'`, which means asset URLs are root-absolute (see ARCH-23),
   - build target = Vite 8's `baseline-widely-available` (see ARCH-30),
   - a single JS chunk and a single CSS file.
@@ -131,7 +135,7 @@ flowchart TD
   | CSS   | 12.2 KB | 3.2 KB  | 2026-10-11                             |
   | HTML  | 0.8 KB  | 0.5 KB  | 2026-10-11 (includes the CSP meta tag) |
 
-  > ✅ **Enforced in CI.** [scripts/check-size.js](../../web/scripts/check-size.js) (`npm run size`, run after Build in `ci.yml`) fails if the gzipped JS total exceeds **20 KB** or the gzipped CSS total exceeds **5 KB**. It also fails if `dist/assets` contains no JS. That leaves room to add content without letting a framework-sized dependency slip in. The README cites the same numbers.
+  > ✅ **Enforced in CI.** [scripts/check-size.ts](../../web/scripts/check-size.ts) (`npm run size`, run after Build in `ci.yml`) fails if the gzipped JS total exceeds **20 KB** or the gzipped CSS total exceeds **5 KB**. It also fails if `dist/assets` contains no JS. That leaves room to add content without letting a framework-sized dependency slip in. The README cites the same numbers.
 
 - **ARCH-16 Runtime work.** Tokenizing and `getExplanation` both run once per token per example switch (memoised, ARCH-4). Both are O(n) in the example size. No virtualisation is needed.
 
@@ -140,7 +144,7 @@ flowchart TD
 | Layer          | Tooling                                | Target                                                                                                         | Scope                                                                   | Runs in                                                                          |
 | -------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | Unit           | Vitest                                 | `src/data/*`                                                                                                   | Tokenizer and explanation logic                                         | **Node** (`// @vitest-environment node` at the top of each data-layer test file) |
-| Component / UI | Vitest + Testing Library + jsdom       | `src/components/*`, `App`                                                                                      | Rendering, ARIA, events, `localStorage`                                 | jsdom (the default in `vite.config.js`)                                          |
+| Component / UI | Vitest + Testing Library + jsdom       | `src/components/*`, `App`                                                                                      | Rendering, ARIA, events, `localStorage`                                 | jsdom (the default in `vite.config.ts`)                                          |
 | End-to-end     | Cucumber + Puppeteer (headless Chrome) | A running site at `BASE_URL` (default `http://localhost:5173`; CI uses `vite preview` of the production build) | User flows, real layout and CSS, CSP, reduced motion, axe accessibility | Real browser                                                                     |
 
 - **ARCH-17** Each layer owns different behaviour:
@@ -150,27 +154,27 @@ flowchart TD
   - E2E scenarios that need a browser are tagged `@browser`. The `Before`/`After` hooks open and close Chrome around them and save a full-page screenshot when a scenario fails, to `FEATURE_ARTIFACTS_DIR`, which defaults to `features/artifacts` (gitignored).
 - **ARCH-18** E2E tests target any environment through `BASE_URL`, including production. They start with a "site is up" health check so they fail fast with a clear message.
   - [cucumber.yml](../../web/cucumber.yml) has two profiles: `default` (every feature) and `smoke` (`site.feature` only, used after deploys). Select one with `--profile`. Paths passed on the CLI are merged with the profile's paths rather than replacing them, so pass a profile, not a file path, to run a subset.
-- **ARCH-19** jsdom workaround: [setup.js](../../web/src/__tests__/setup.js) replaces Node 22+'s experimental `localStorage` global with jsdom's. Remove it once the supported Node versions no longer need it.
+- **ARCH-19** jsdom workaround: [setup.ts](../../web/src/__tests__/setup.ts) replaces Node 22+'s experimental `localStorage` global with jsdom's. Remove it once the supported Node versions no longer need it.
 - **ARCH-26** Placeholder Cucumber scaffolding was removed 2026-10-11. Every feature file must test real behaviour.
 
 ## 8. Tooling and conventions
 
-| Concern            | Tool                                                                                                                            | Scope                                                                                                      | Enforced in CI? |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------- |
-| Lint: JS           | ESLint 10 (flat config), `@eslint/js` + `react` + `react-hooks`, plus the data-layer guard (ARCH-1)                             | all of `web/` (`npm run lint:js`), `--max-warnings 0`                                                      | ✅ (`ci.yml`)   |
-| Lint: CSS          | Stylelint + `stylelint-config-standard` ([.stylelintrc.json](../../web/.stylelintrc.json))                                      | `web/src/**/*.css` (`npm run lint:css`)                                                                    | ✅ (`ci.yml`)   |
-| Lint: Markdown     | markdownlint-cli2 ([.markdownlint.jsonc](../../.markdownlint.jsonc))                                                            | every `*.md` in the repo (`npm run lint:md`)                                                               | ✅ (`ci.yml`)   |
-| Lint: workflows    | actionlint (pinned Docker image, includes shellcheck)                                                                           | `.github/workflows/*.yml`                                                                                  | ✅ (`ci.yml`)   |
-| Type-check         | `tsc` with `checkJs`, `strict` (ARCH-6)                                                                                         | all of `src/`, including tests                                                                             | ✅ (`ci.yml`)   |
-| Format             | Prettier ([.prettierrc](../../.prettierrc): `singleQuote`, `trailingComma: all`, `printWidth: 100`) + `prettier-plugin-gherkin` | the whole repo except [.prettierignore](../../.prettierignore) (`npm run format` / `npm run format:check`) | ✅ (`ci.yml`)   |
-| Bundle size        | `scripts/check-size.js` (ARCH-15)                                                                                               | `dist/assets`                                                                                              | ✅ (`ci.yml`)   |
-| Runtime            | Node from [web/.nvmrc](../../web/.nvmrc) (22); `package.json` `engines: >=22`                                                   | both workflows use `node-version-file`                                                                     | ✅              |
-| Dependency updates | Dependabot                                                                                                                      | npm (`/web`) and GitHub Actions, weekly                                                                    | n/a             |
+| Concern            | Tool                                                                                                                                                                 | Scope                                                                                                      | Enforced in CI? |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------- |
+| Lint: TypeScript   | ESLint 10 (flat config, `eslint.config.ts`), `@eslint/js` + typescript-eslint `recommendedTypeChecked` + `react` + `react-hooks`, plus the data-layer guard (ARCH-1) | all of `web/` (`npm run lint:js`), `--max-warnings 0`                                                      | ✅ (`ci.yml`)   |
+| Lint: CSS          | Stylelint + `stylelint-config-standard` ([.stylelintrc.json](../../web/.stylelintrc.json))                                                                           | `web/src/**/*.css` (`npm run lint:css`)                                                                    | ✅ (`ci.yml`)   |
+| Lint: Markdown     | markdownlint-cli2 ([.markdownlint.jsonc](../../.markdownlint.jsonc))                                                                                                 | every `*.md` in the repo (`npm run lint:md`)                                                               | ✅ (`ci.yml`)   |
+| Lint: workflows    | actionlint (pinned Docker image, includes shellcheck)                                                                                                                | `.github/workflows/*.yml`                                                                                  | ✅ (`ci.yml`)   |
+| Type-check         | `tsc` (TypeScript ~6.0), `strict` (ARCH-6)                                                                                                                           | every `.ts`/`.tsx` file in `web/`                                                                          | ✅ (`ci.yml`)   |
+| Format             | Prettier ([.prettierrc](../../.prettierrc): `singleQuote`, `trailingComma: all`, `printWidth: 100`) + `prettier-plugin-gherkin`                                      | the whole repo except [.prettierignore](../../.prettierignore) (`npm run format` / `npm run format:check`) | ✅ (`ci.yml`)   |
+| Bundle size        | `scripts/check-size.ts` (ARCH-15)                                                                                                                                    | `dist/assets`                                                                                              | ✅ (`ci.yml`)   |
+| Runtime            | Node from [web/.nvmrc](../../web/.nvmrc) (22); `package.json` `engines: >=22.18` (native TS type stripping)                                                          | both workflows use `node-version-file`                                                                     | ✅              |
+| Dependency updates | Dependabot                                                                                                                                                           | npm (`/web`) and GitHub Actions, weekly                                                                    | n/a             |
 
 - **ARCH-27 Lint and format everything that isn't generated** (decided 2026-10-11).
   - The only files excluded are generated or vendored ones: `node_modules/`, `dist/`, `coverage/`, `features/artifacts/` and `package-lock.json`. Add new generated outputs to `.prettierignore` (and to ESLint's `ignores`) when they appear.
   - All tooling is installed in `web/`, so the npm scripts run from `web/` and reach root files through `..`. Prettier must run from `web/` so it can resolve `prettier-plugin-gherkin`; running `prettier` from the repo root fails to load the plugin.
-  - ESLint globals depend on where code runs: browser for `src/`, Node for config files and `scripts/`, and both for `features/`, because step definitions pass callbacks to `page.evaluate()`.
+  - ESLint uses typescript-eslint's type-aware `recommendedTypeChecked` rules (`projectService`, sharing `tsconfig.json`). Globals depend on where code runs: browser for `src/`, Node for config files and `scripts/`, and both for `features/`, because step definitions pass callbacks to `page.evaluate()`.
   - Stylelint uses the standard config, with camelCase class names allowed for CSS Modules. Its autofixes moved the CSS to modern colour notation (`rgb(r g b / a%)`) and range media queries (`width <= 768px`). Both are inside the ARCH-30 browser baseline.
   - markdownlint disables MD013 (line length), because prose isn't hard-wrapped. Tables whose code cells start with significant spaces turn off MD038 locally, with a comment explaining why.
   - Not linted, with no maintained tool or no real benefit: `.feature` files (Prettier formats them, but `gherkin-lint` hasn't been released since 2023), `index.html` (one small file; its rendered output is checked by axe) and `favicon.svg`.
@@ -198,7 +202,7 @@ The detailed rules (WF-*) live in [github-workflows.md](./github-workflows.md); 
   - The README links (Live demo, production `BASE_URL` example) use `https://dockerfile.pub/`.
 - **ARCH-24 Static hosting limits.** GitHub Pages does not allow custom response headers (CSP, HSTS policy, cache headers). With no backend and no third-party scripts, the main risk would be an XSS hole in rendering. That is covered by the text-only rendering rules (EXP-5, RUNX-14, PNL-12).
   - As defence in depth, the production build has a `<meta http-equiv="Content-Security-Policy">`: `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'`.
-  - It is injected by a Vite plugin in [vite.config.js](../../web/vite.config.js) (`transformIndexHtml`, `apply: 'build'`). It is deliberately absent in dev, because the dev server adds inline scripts for hot reload.
+  - It is injected by a Vite plugin in [vite.config.ts](../../web/vite.config.ts) (`transformIndexHtml`, `apply: 'build'`). It is deliberately absent in dev, because the dev server adds inline scripts for hot reload.
   - The production output has no inline scripts or styles. `ExampleToggler` sets styles through the CSSOM (`element.style.*`), which `style-src 'self'` allows.
   - `site.feature` records `securitypolicyviolation` events while the page is used and fails on any violation. It runs against the production build in CI and against the live site after each deploy.
   - Meta-tag CSP cannot set `frame-ancestors`; clickjacking protection would need response headers, which Pages does not support.
@@ -261,26 +265,26 @@ Treat this as a new spec, not an extension of an existing one.
 - **ARCH-30** Supported browsers are Vite 8's default `baseline-widely-available` build target: **Chrome/Edge 111+, Firefox 114+, Safari/iOS Safari 16.4+**.
   - The CSS features in use (`dvh` units, `:focus-visible`, custom properties) and the JS syntax in use (`??`, `?.`, `||=`) are all available in these versions.
   - New CSS or JS features must be available in every one of these versions, or be degraded gracefully.
-  - Changing `build.target` in `vite.config.js` is an architecture change and must update this rule.
+  - Changing `build.target` in `vite.config.ts` is an architecture change and must update this rule.
 
 ## 11. Decision log
 
-| #   | Decision                                                                                                       | Rationale                                                                               | Status                                              |
-| --- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| D1  | Static SPA, no backend                                                                                         | Content is fixed; zero hosting cost; nothing to secure server-side                      | Accepted                                            |
-| D2  | Preact over React                                                                                              | Bundle size (ARCH-15)                                                                   | Accepted                                            |
-| D3  | JS + JSDoc over TypeScript source                                                                              | Simplicity; no compile step for app code. Types are still checked with `tsc --checkJs`. | Accepted; see ARCH-6                                |
-| D4  | CSS Modules + custom-property tokens; no CSS framework                                                         | Scoped styles, theming through tokens, zero runtime cost                                | Accepted                                            |
-| D5  | Dark by default, light through `prefers-color-scheme`; no toggle                                               | Developer-tool convention; no state to persist                                          | Accepted                                            |
-| D6  | Content bundled as JS modules                                                                                  | Small size; type-adjacent; no fetch                                                     | Accepted; revisit per content spec §8.4             |
-| D7  | Tokenize on the client, per line, display-only                                                                 | Keeps raw examples human-editable                                                       | Accepted; see tokenizer spec                        |
-| D8  | All state in `App`                                                                                             | Shallow tree; three pieces of state                                                     | Accepted; see ARCH-3                                |
-| D9  | Three test layers (Vitest unit, Vitest + jsdom UI, Cucumber + Puppeteer E2E)                                   | Readable acceptance scenarios; E2E can target any environment                           | Accepted                                            |
-| D10 | GitHub Pages + custom domain at the root                                                                       | Free, integrated with Actions                                                           | Accepted; see ARCH-23 (configured outside the repo) |
-| D11 | Deploy is not gated by the deploy workflow; branch protection on `main` requires PRs to pass CI before merging | CI already runs on every PR; avoids `workflow_run` complexity                           | Accepted 2026-10-11; see ARCH-20                    |
-| D12 | Explanations are resolved in `App` and attached to tokens; components never import `src/data`                  | One lookup per token per example switch; clear layer boundary                           | Accepted; see ARCH-2                                |
-| D13 | Automated accessibility checks run in the E2E layer (axe-core), not in jsdom                                   | jsdom cannot compute real colours, layout or target sizes                               | Accepted 2026-10-11; see ARCH-29                    |
-| D14 | No `CNAME` file; the Pages setting plus this spec are the record of the custom domain                          | GitHub ignores `CNAME` for Actions deployments                                          | Accepted 2026-10-11; see ARCH-23                    |
+| #   | Decision                                                                                                            | Rationale                                                                                                                                              | Status                                              |
+| --- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------- |
+| D1  | Static SPA, no backend                                                                                              | Content is fixed; zero hosting cost; nothing to secure server-side                                                                                     | Accepted                                            |
+| D2  | Preact over React                                                                                                   | Bundle size (ARCH-15)                                                                                                                                  | Accepted                                            |
+| D3  | TypeScript for all source, using erasable syntax only (superseded the original "JS + JSDoc" decision on 2026-10-11) | Real type annotations instead of JSDoc casts; one toolchain for app, tests, E2E and scripts; Node runs `.ts` directly, so there is no extra build step | Accepted 2026-10-11; see ARCH-6                     |
+| D4  | CSS Modules + custom-property tokens; no CSS framework                                                              | Scoped styles, theming through tokens, zero runtime cost                                                                                               | Accepted                                            |
+| D5  | Dark by default, light through `prefers-color-scheme`; no toggle                                                    | Developer-tool convention; no state to persist                                                                                                         | Accepted                                            |
+| D6  | Content bundled as JS modules                                                                                       | Small size; type-adjacent; no fetch                                                                                                                    | Accepted; revisit per content spec §8.4             |
+| D7  | Tokenize on the client, per line, display-only                                                                      | Keeps raw examples human-editable                                                                                                                      | Accepted; see tokenizer spec                        |
+| D8  | All state in `App`                                                                                                  | Shallow tree; three pieces of state                                                                                                                    | Accepted; see ARCH-3                                |
+| D9  | Three test layers (Vitest unit, Vitest + jsdom UI, Cucumber + Puppeteer E2E)                                        | Readable acceptance scenarios; E2E can target any environment                                                                                          | Accepted                                            |
+| D10 | GitHub Pages + custom domain at the root                                                                            | Free, integrated with Actions                                                                                                                          | Accepted; see ARCH-23 (configured outside the repo) |
+| D11 | Deploy is not gated by the deploy workflow; branch protection on `main` requires PRs to pass CI before merging      | CI already runs on every PR; avoids `workflow_run` complexity                                                                                          | Accepted 2026-10-11; see ARCH-20                    |
+| D12 | Explanations are resolved in `App` and attached to tokens; components never import `src/data`                       | One lookup per token per example switch; clear layer boundary                                                                                          | Accepted; see ARCH-2                                |
+| D13 | Automated accessibility checks run in the E2E layer (axe-core), not in jsdom                                        | jsdom cannot compute real colours, layout or target sizes                                                                                              | Accepted 2026-10-11; see ARCH-29                    |
+| D14 | No `CNAME` file; the Pages setting plus this spec are the record of the custom domain                               | GitHub ignores `CNAME` for Actions deployments                                                                                                         | Accepted 2026-10-11; see ARCH-23                    |
 
 ## 12. Verification checklist
 
@@ -289,7 +293,8 @@ Steps that turn the rules in this spec into automated checks:
 - [x] Data-layer purity (ARCH-1): ESLint `no-restricted-imports` + `no-restricted-globals` for `src/data/**`.
 - [x] Data-layer tests run in Node (ARCH-17): `// @vitest-environment node`.
 - [x] Bundle budget (ARCH-15): `npm run size` after Build in `ci.yml`.
-- [x] Type-check JSDoc (ARCH-6): `npm run typecheck` in `ci.yml`.
+- [x] Type-check (ARCH-6): `npm run typecheck` in `ci.yml`.
+- [x] Convert all JS to TypeScript (ARCH-6 / D3).
 - [x] Strict type-checking, including tests (ARCH-6).
 - [x] Fix the dead `:global(.viewer)` rule and the double border (ARCH-7).
 - [x] Replace the `#fff` literal and remove `--c-image` (ARCH-8).

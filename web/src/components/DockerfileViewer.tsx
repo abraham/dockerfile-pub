@@ -1,21 +1,20 @@
+import type { Line, Token as TokenData } from '../data/tokenizer';
+import type { Explanation } from '../data/explanations';
 import styles from './DockerfileViewer.module.css';
 
-/**
- * @typedef {import('../data/tokenizer').Token & {
- *   explanation: import('../data/explanations').Explanation | null
- * }} ResolvedToken
- */
+/** A token with its explanation resolved by `App` (ARCH-2). */
+export type ResolvedToken = TokenData & { explanation: Explanation | null };
 
-/**
- * Renders a tokenized Dockerfile with interactive keyword/flag tokens.
- *
- * @param {{
- *   lines: (Omit<import('../data/tokenizer').Line, 'tokens'> & { tokens: ResolvedToken[] })[],
- *   activeTokenId: string|null,
- *   onTokenClick: (token: ResolvedToken) => void
- * }} props
- */
-export function DockerfileViewer({ lines, activeTokenId, onTokenClick }) {
+export type ResolvedLine = Omit<Line, 'tokens'> & { tokens: ResolvedToken[] };
+
+interface DockerfileViewerProps {
+  lines: ResolvedLine[];
+  activeTokenId: string | null;
+  onTokenClick: (token: ResolvedToken) => void;
+}
+
+/** Renders a tokenized Dockerfile with interactive keyword/flag tokens. */
+export function DockerfileViewer({ lines, activeTokenId, onTokenClick }: DockerfileViewerProps) {
   return (
     <div class={styles.viewer} role="region" aria-label="Dockerfile source">
       <pre class={styles.pre}>
@@ -47,12 +46,14 @@ export function DockerfileViewer({ lines, activeTokenId, onTokenClick }) {
   );
 }
 
-/**
- * Renders a single token, interactive if it has an explanation.
- *
- * @param {{ token: ResolvedToken, isActive: boolean, onTokenClick: (token: ResolvedToken) => void }} props
- */
-function Token({ token, isActive, onTokenClick }) {
+interface TokenProps {
+  token: ResolvedToken;
+  isActive: boolean;
+  onTokenClick: (token: ResolvedToken) => void;
+}
+
+/** Renders a single token, interactive if it has an explanation. */
+function Token({ token, isActive, onTokenClick }: TokenProps) {
   const explanation = token.explanation;
   const isInteractive = explanation != null;
 

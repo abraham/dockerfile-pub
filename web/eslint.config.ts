@@ -1,21 +1,26 @@
 import js from '@eslint/js';
+import { defineConfig } from 'eslint/config';
 import globals from 'globals';
 import reactPlugin from 'eslint-plugin-react';
 import reactHooksPlugin from 'eslint-plugin-react-hooks';
+import tseslint from 'typescript-eslint';
 
-export default [
+export default defineConfig([
   { ignores: ['dist', 'coverage', 'features/artifacts'] },
   {
-    files: ['**/*.{js,jsx}'],
-    ...js.configs.recommended,
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      js.configs.recommended,
+      tseslint.configs.recommendedTypeChecked,
+      reactHooksPlugin.configs.flat.recommended,
+    ],
     plugins: {
       react: reactPlugin,
-      'react-hooks': reactHooksPlugin,
     },
     languageOptions: {
-      ecmaVersion: 'latest',
-      sourceType: 'module',
       parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
         ecmaFeatures: { jsx: true },
       },
     },
@@ -26,29 +31,27 @@ export default [
       },
     },
     rules: {
-      ...js.configs.recommended.rules,
       ...reactPlugin.configs.recommended.rules,
-      ...reactHooksPlugin.configs.recommended.rules,
       'react/prop-types': 'off',
       'react/react-in-jsx-scope': 'off',
       'react/no-unknown-property': ['error', { ignore: ['class', 'for'] }],
     },
   },
   {
-    files: ['src/**/*.{js,jsx}'],
+    files: ['src/**/*.{ts,tsx}'],
     languageOptions: { globals: globals.browser },
   },
   {
-    files: ['*.js', 'scripts/**/*.js'],
+    files: ['*.ts', 'scripts/**/*.ts'],
     languageOptions: { globals: globals.node },
   },
   {
     // Step definitions run in Node but pass callbacks to page.evaluate() that run in the browser.
-    files: ['features/**/*.js'],
+    files: ['features/**/*.ts'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
   {
-    files: ['src/data/**/*.js'],
+    files: ['src/data/**/*.ts'],
     rules: {
       'no-restricted-globals': [
         'error',
@@ -73,4 +76,4 @@ export default [
       ],
     },
   },
-];
+]);

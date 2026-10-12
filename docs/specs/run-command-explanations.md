@@ -3,9 +3,9 @@
 |                 |                                                                                                                                                                                           |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Status**      | Draft. Documents current behaviour; deviations and open questions are flagged inline.                                                                                                     |
-| **Source**      | `getChunkExplanationKey()` in [tokenizer.js](../../web/src/data/tokenizer.js); `getExplanation()` / `buildRunChunkExplanation()` in [explanations.js](../../web/src/data/explanations.js) |
-| **Rendered by** | `Token` in [DockerfileViewer.jsx](../../web/src/components/DockerfileViewer.jsx), [SidePanel.jsx](../../web/src/components/SidePanel.jsx)                                                 |
-| **Tests**       | [tokenizer.test.js](../../web/src/__tests__/tokenizer.test.js), [App.test.jsx](../../web/src/__tests__/App.test.jsx)                                                                      |
+| **Source**      | `getChunkExplanationKey()` in [tokenizer.ts](../../web/src/data/tokenizer.ts); `getExplanation()` / `buildRunChunkExplanation()` in [explanations.ts](../../web/src/data/explanations.ts) |
+| **Rendered by** | `Token` in [DockerfileViewer.tsx](../../web/src/components/DockerfileViewer.tsx), [SidePanel.tsx](../../web/src/components/SidePanel.tsx)                                                 |
+| **Tests**       | [tokenizer.test.ts](../../web/src/__tests__/tokenizer.test.ts), [App.test.tsx](../../web/src/__tests__/App.test.tsx)                                                                      |
 | **Related**     | [tokenizer.md](./tokenizer.md) (TOK-20, TOK-22, §6.2–6.4)                                                                                                                                 |
 
 ## 1. Purpose
@@ -176,13 +176,13 @@ Every command (`npm`, `apt-get`, `adduser`) gets the same generic text. **Open q
 
 | Rule                                                        | Covered?   | Where / what to add                                                                        |
 | ----------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------ |
-| RUNX-1 keys for command, option, operator chunks            | ✅         | `tokenizer.test.js` › "sets explanation keys for non-whitespace RUN command fragments"     |
+| RUNX-1 keys for command, option, operator chunks            | ✅         | `tokenizer.test.ts` › "sets explanation keys for non-whitespace RUN command fragments"     |
 | RUNX-1 no keys for whitespace / non-RUN lines               | ❌         | Assert `null` for whitespace on `RUN` and for chunks on `COPY`                             |
 | RUNX-2 flags, variables, strings on RUN keep non-chunk keys | ❌         | `RUN --mount=x echo "$HOME" $X`                                                            |
-| RUNX-5–7 lookup routing, empty chunk → `null`               | ❌         | Unit-test `getExplanation` directly (no `explanations.test.js` yet)                        |
+| RUNX-5–7 lookup routing, empty chunk → `null`               | ❌         | Unit-test `getExplanation` directly (no `explanations.test.ts` yet)                        |
 | RUNX-9–11 classification for each category                  | ❌         | One case per category, plus `--` and `foo;`                                                |
 | RUNX-12 `short` ≤ 120 chars, ≥ 1 link                       | ❌         | Property check across all generated categories and all static entries                      |
-| RUNX-16 button `aria-label` / `title`                       | ✅ partial | `App.test.jsx` finds `/^addgroup:/` by role/name                                           |
-| RUNX-17 panel heading = chunk text                          | ✅         | `App.test.jsx` › "opens for RUN command fragments after the keyword"                       |
+| RUNX-16 button `aria-label` / `title`                       | ✅ partial | `App.test.tsx` finds `/^addgroup:/` by role/name                                           |
+| RUNX-17 panel heading = chunk text                          | ✅         | `App.test.tsx` › "opens for RUN command fragments after the keyword"                       |
 | RUNX-18 swapping between fragments                          | ❌         | Click `addgroup` then `&&`; panel stays open and heading changes                           |
 | End-to-end (Cucumber)                                       | ❌         | Scenario in `instruction_explanation.feature`: click a RUN fragment in the Complex example |

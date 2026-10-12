@@ -1,14 +1,17 @@
 import { useRef, useLayoutEffect } from 'preact/hooks';
 import styles from './ExampleToggler.module.css';
 
-/**
- * Toggle group for switching between Dockerfile examples.
- * @param {{ examples: {key:string,label:string}[], value: string, onChange: (key:string)=>void }} props
- */
-export function ExampleToggler({ examples, value, onChange }) {
-  const containerRef = useRef(/** @type {HTMLDivElement | null} */ (null));
-  const indicatorRef = useRef(/** @type {HTMLSpanElement | null} */ (null));
-  const buttonRefs = useRef(/** @type {Record<string, HTMLButtonElement | null>} */ ({}));
+interface ExampleTogglerProps {
+  examples: { key: string; label: string }[];
+  value: string;
+  onChange: (key: string) => void;
+}
+
+/** Toggle group for switching between Dockerfile examples. */
+export function ExampleToggler({ examples, value, onChange }: ExampleTogglerProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const indicatorRef = useRef<HTMLSpanElement>(null);
+  const buttonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const isFirstRenderRef = useRef(true);
 
   useLayoutEffect(() => {

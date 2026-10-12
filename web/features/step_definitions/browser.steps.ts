@@ -1,12 +1,13 @@
 import { Given, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
+import type { PuppeteerWorld } from '../support/world';
 
-Given('a headless browser is open', function () {
+Given('a headless browser is open', function (this: PuppeteerWorld) {
   assert.ok(this.browser, 'Expected browser to be launched');
   assert.ok(this.page, 'Expected a page to be open');
 });
 
-Then('a new blank page can be loaded', async function () {
+Then('a new blank page can be loaded', async function (this: PuppeteerWorld) {
   await this.page.goto('about:blank');
   const title = await this.page.title();
   assert.equal(title, '', 'Expected blank page to have an empty title');

@@ -1,10 +1,16 @@
-import { setWorldConstructor } from '@cucumber/cucumber';
-import puppeteer from 'puppeteer';
+import { setWorldConstructor, World, type IWorldOptions } from '@cucumber/cucumber';
+import puppeteer, { type Browser, type Page } from 'puppeteer';
 
 const DEFAULT_BASE_URL = 'http://localhost:5173';
 
-class PuppeteerWorld {
-  constructor() {
+export class PuppeteerWorld extends World {
+  baseUrl: string;
+  // Set by the @browser Before hook (hooks.ts) before any step runs.
+  browser!: Browser;
+  page!: Page;
+
+  constructor(options: IWorldOptions) {
+    super(options);
     this.baseUrl = process.env.BASE_URL || DEFAULT_BASE_URL;
   }
 
