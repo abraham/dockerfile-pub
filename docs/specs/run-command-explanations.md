@@ -2,7 +2,7 @@
 
 |                   |                                                                                                                                                                                                                                        |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**        | Implemented (2026-10-13). The design was rewritten on 2026-10-12 and builds on the tokenizer ([tokenizer.md](./tokenizer.md)); §13 records the migration from `RUN_CHUNK:` keys. The file name is kept so existing links keep working. |
+| **Status**        | Implemented (2026-10-12). The design was rewritten on 2026-10-12 and builds on the tokenizer ([tokenizer.md](./tokenizer.md)); §13 records the migration from `RUN_CHUNK:` keys. The file name is kept so existing links keep working. |
 | **Source**        | [web/src/data/commands/](../../web/src/data/commands/explain.ts) (`explain.ts`, `resolve.ts`, `catalog.ts`, `shell-syntax.ts`); dispatched from `getExplanation()` in [explanations.ts](../../web/src/data/explanations.ts)            |
 | **Rendered by**   | `Token` in [DockerfileViewer.tsx](../../web/src/components/DockerfileViewer.tsx), [SidePanel.tsx](../../web/src/components/SidePanel.tsx)                                                                                              |
 | **Tests**         | [web/src/\_\_tests\_\_/commands.test.ts](../../web/src/__tests__/commands.test.ts), plus the fixtures shared with the tokenizer                                                                                                        |
@@ -369,7 +369,7 @@ The `details` for `"nginx"` include the `CMD` exec-form framing. The nginx entry
 
 ## 13. Migration from the previous implementation
 
-The migration below is complete (2026-10-13); it is kept as a record.
+The migration below is complete (2026-10-12); it is kept as a record.
 
 | Current                                                                        | Target                                                                                         |
 | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |

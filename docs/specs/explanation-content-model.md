@@ -2,7 +2,7 @@
 
 |                   |                                                                                                                                                                                                                                                                                                    |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**        | Implemented (2026-10-13). The design was rewritten on 2026-10-12 and builds on the tokenizer ([tokenizer.md](./tokenizer.md)) and command explanations ([run-command-explanations.md](./run-command-explanations.md)); §12 records the migration from string keys and a `details` string.          |
+| **Status**        | Implemented (2026-10-12). The design was rewritten on 2026-10-12 and builds on the tokenizer ([tokenizer.md](./tokenizer.md)) and command explanations ([run-command-explanations.md](./run-command-explanations.md)); §12 records the migration from string keys and a `details` string.          |
 | **Source**        | [web/src/data/content/](../../web/src/data/content/schema.ts) (`schema.ts`, `rich-text.ts`, `registry.ts`, `instructions.ts`, `flags.ts`, `keywords.ts`, `directives.ts`, `arguments.ts`, `variables.ts`); entry point `getExplanation()` in [explanations.ts](../../web/src/data/explanations.ts) |
 | **Rendered by**   | [SidePanel.tsx](../../web/src/components/SidePanel.tsx) (panel), `Token` in [DockerfileViewer.tsx](../../web/src/components/DockerfileViewer.tsx) (tooltip and accessible name)                                                                                                                    |
 | **Tests**         | [web/src/\_\_tests\_\_/content.test.ts](../../web/src/__tests__/content.test.ts); plus [SidePanel.test.tsx](../../web/src/__tests__/SidePanel.test.tsx) for rendering                                                                                                                              |
@@ -221,7 +221,7 @@ These rules apply to hand-written content. Generated templates follow them too, 
 
 ## 9. Inventory
 
-All targets below were reached on 2026-10-13.
+All targets below were reached on 2026-10-12.
 
 | Kind          | Before                                                       | Now                             | Added                                                                                                                                 |
 | ------------- | ------------------------------------------------------------ | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
@@ -263,7 +263,7 @@ All targets below were reached on 2026-10-13.
 
 ## 12. Migration from the previous implementation
 
-The migration below is complete (2026-10-13); it is kept as a record.
+The migration below is complete (2026-10-12); it is kept as a record.
 
 ### 12.1 Breaking changes
 
