@@ -2,9 +2,9 @@
 
 |                   |                                                                                                                                                                                                                                        |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**        | Implemented (2026-10-13). The design was rewritten on 2026-10-12 and builds on the tokenizer ([tokenizer.md](./tokenizer.md)); §13 records the migration from `RUN_CHUNK:` keys. The file name is kept so existing links keep working. |
+| **Status**        | Implemented (2026-10-12). The design was rewritten on 2026-10-12 and builds on the tokenizer ([tokenizer.md](./tokenizer.md)); §13 records the migration from `RUN_CHUNK:` keys. The file name is kept so existing links keep working. |
 | **Source**        | [web/src/data/commands/](../../web/src/data/commands/explain.ts) (`explain.ts`, `resolve.ts`, `catalog.ts`, `shell-syntax.ts`); dispatched from `getExplanation()` in [explanations.ts](../../web/src/data/explanations.ts)            |
-| **Rendered by**   | `Token` in [DockerfileViewer.tsx](../../web/src/components/DockerfileViewer.tsx), [SidePanel.tsx](../../web/src/components/SidePanel.tsx)                                                                                              |
+| **Rendered by**   | `TokenButton` in [DockerfileViewer.tsx](../../web/src/components/DockerfileViewer.tsx), [ExplanationContent.tsx](../../web/src/components/ExplanationContent.tsx)                                                                      |
 | **Tests**         | [web/src/\_\_tests\_\_/commands.test.ts](../../web/src/__tests__/commands.test.ts), plus the fixtures shared with the tokenizer                                                                                                        |
 | **Related specs** | [tokenizer.md](./tokenizer.md) (refs and command context, §3.3, TOK-33 to TOK-36), [explanation-content-model.md](./explanation-content-model.md) (schema and authoring rules), [explanation-panel.md](./explanation-panel.md)         |
 
@@ -284,7 +284,7 @@ These are in addition to the general authoring rules in [explanation-content-mod
 The panel and token rules in [explanation-panel.md](./explanation-panel.md) and the button semantics in `DockerfileViewer` apply unchanged.
 
 - **CMDX-24** Because of CMDX-2, every in-scope token is interactive. Whitespace and comments have no ref and stay plain text.
-- **CMDX-25** The toolbar hint changes from "Click a keyword, flag, or command fragment to explore" to "Click any highlighted part of the Dockerfile to explore", since nearly everything is now explainable.
+- **CMDX-25** The toolbar hint changes from "Click a keyword, flag, or command fragment to explore" to "Click any highlighted part of the Dockerfile to explore", since nearly everything is now explainable. It is static text, not a live region (explanation-panel.md §7).
 
 ## 10. Worked examples (bundled examples)
 
@@ -369,7 +369,7 @@ The `details` for `"nginx"` include the `CMD` exec-form framing. The nginx entry
 
 ## 13. Migration from the previous implementation
 
-The migration below is complete (2026-10-13); it is kept as a record.
+The migration below is complete (2026-10-12); it is kept as a record.
 
 | Current                                                                        | Target                                                                                         |
 | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |

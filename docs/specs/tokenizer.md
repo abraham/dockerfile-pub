@@ -2,7 +2,7 @@
 
 |                   |                                                                                                                                                                                                |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**        | Implemented (2026-10-13). The design was rewritten on 2026-10-11 and implemented as specified; §12 records the migration from the older line-by-line design.                                   |
+| **Status**        | Implemented (2026-10-12). The design was rewritten on 2026-10-11 and implemented as specified; §12 records the migration from the older line-by-line design.                                   |
 | **Source**        | [web/src/data/tokenizer/](../../web/src/data/tokenizer/index.ts) (modules in §4.6)                                                                                                             |
 | **Tests**         | [web/src/\_\_tests\_\_/tokenizer.test.ts](../../web/src/__tests__/tokenizer.test.ts)                                                                                                           |
 | **Consumers**     | `App` (attaches explanations to tokens), `DockerfileViewer` (renders lines and token types), `getExplanation()` in [explanations.ts](../../web/src/data/explanations.ts) (resolves token refs) |
@@ -568,7 +568,7 @@ These fit the data model without breaking it:
 
 ## 12. Migration from the previous implementation
 
-The migration below is complete (2026-10-13); it is kept as a record.
+The migration below is complete (2026-10-12); it is kept as a record.
 
 ### 12.1 Breaking changes for consumers
 

@@ -60,7 +60,9 @@ flowchart TD
   main --> gcss[global.css]
   App --> ET[ExampleToggler]
   App --> DV[DockerfileViewer]
-  App --> SP[SidePanel]
+  App --> EP[ExplanationPanel]
+  EP --> EC[ExplanationContent]
+  EC --> RT[RichText]
   App --> CB[CopyButton]
   App --> tok[data/tokenizer]
   App --> ex[data/examples]
@@ -69,15 +71,16 @@ flowchart TD
 
 - **ARCH-1 Data layer is pure.** Modules in `src/data/` must not import Preact, the DOM or browser APIs. They must be deterministic, so they can run in Node directly (`node --input-type=module`) and be unit-tested without jsdom.
   - Enforced by ESLint for `src/data/**`: `no-restricted-imports` blocks `preact`, `preact/*`, components, `App` and CSS; `no-restricted-globals` blocks `window`, `document`, `navigator`, `localStorage`, `sessionStorage` and `fetch`.
-- **ARCH-2 Components receive data through props.** Components get everything they render from props and raise events through callbacks (`onChange`, `onTokenClick`, `onClose`). They hold only local UI state, such as `CopyButton`'s "Copied!" flag or `ExampleToggler`'s indicator refs. Components do not import from `src/data/`.
-  - `App` resolves each token's explanation once per example switch and attaches it as `token.explanation` (`Explanation | null`), together with `token.summary`, the flattened `short` text (EXP-29). `DockerfileViewer` treats a token as interactive when `token.explanation` is non-null and uses `summary` for its tooltip and accessible name; `SidePanel` receives the same object. Components may import types from `src/data/`, but no runtime code. The tokenizer itself stays independent of the explanation content (tokenizer spec §2).
+- **ARCH-2 Components receive data through props.** Components get everything they render from props and raise events through callbacks (`onChange`, `onTokenSelect`, `onClose`, `onBack`, `onNavigate`). They hold only local UI state, such as `CopyButton`'s "Copied!" flag, the viewer's roving tab stop or the panel's exit transition. Components do not import runtime code from `src/data/`.
+  - `App` resolves each token's explanation once per example switch and attaches it as `token.explanation` (`Explanation | null`), together with `token.summary`, the flattened `short` text (EXP-29). `DockerfileViewer` treats a token as interactive when `token.explanation` is non-null and uses `summary` for its tooltip and accessible name. `ExplanationPanel` receives a `PanelEntry` (`{ key, ref, explanation }`) derived from `App`'s panel state. Components may import types from `src/data/`, but no runtime code. The tokenizer itself stays independent of the explanation content (tokenizer spec §2).
 - **ARCH-3 There is one owner of application state.** `App` holds all cross-component state:
 
-  | State           | Type                                                           | Persisted                                                                                                    |
-  | --------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-  | `activeExample` | example key                                                    | `localStorage['df-example']` (invalid or missing values fall back to `simple`; storage errors are swallowed) |
-  | `activeToken`   | `ResolvedToken` (`Token & { explanation, summary }`) or `null` | no                                                                                                           |
-  | `isPanelOpen`   | `boolean`                                                      | no                                                                                                           |
+  | State           | Type                                                                                       | Persisted                                                                                                    |
+  | --------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+  | `activeExample` | example key                                                                                | `localStorage['df-example']` (invalid or missing values fall back to `simple`; storage errors are swallowed) |
+  | `panel`         | `PanelState`: `{ sourceTokenId, stack: PanelEntry[] }` or `null` (explanation-panel.md §3) | no                                                                                                           |
+
+  The open entry, the Back target, the highlighted token and the status announcement are all derived from `panel`.
 
   There is no store, context or router. Introduce one only if state has to be shared across more than one level of components, or deep links are added (see §10.2).
 
@@ -92,7 +95,7 @@ flowchart TD
   - `verbatimModuleSyntax` means type-only imports must use `import type`. This also guarantees that side-effect imports are never silently dropped.
   - Vite (app and Vitest) and ESLint (via `jiti`) compile TypeScript themselves; `tsc` only checks types.
   - TypeScript is pinned to `~6.0`. typescript-eslint does not yet support the native TypeScript 7 compiler, which has no JS API. Upgrade both together.
-  - The shared `ResolvedToken` type (a token plus its explanation, ARCH-2) is exported from `DockerfileViewer.tsx` and imported with `import type` by `App` and `SidePanel`.
+  - The shared `ResolvedToken` type (a token plus its explanation, ARCH-2) is exported from `DockerfileViewer.tsx`, and `PanelEntry` from `ExplanationPanel.tsx`; `App` imports both with `import type`.
   - Prefer typed refs (`useRef<HTMLElement>(null)`) and narrowing with `?.` over non-null assertions. The only cast in app code is `#root` in `main.tsx`, which `index.html` guarantees exists. Cucumber's world declares `browser!`/`page!`, because the `@browser` hook sets them before any step runs.
 
 ## 4. Styling
@@ -131,13 +134,13 @@ flowchart TD
 
   | Asset | Raw      | Gzip    | Measured                               |
   | ----- | -------- | ------- | -------------------------------------- |
-  | JS    | 117.2 KB | 38.4 KB | 2026-10-13, `vite build`               |
-  | CSS   | 13.3 KB  | 3.4 KB  | 2026-10-13                             |
+  | JS    | 117.2 KB | 38.4 KB | 2026-10-12, `vite build`               |
+  | CSS   | 13.3 KB  | 3.4 KB  | 2026-10-12                             |
   | HTML  | 0.8 KB   | 0.5 KB  | 2026-10-11 (includes the CSP meta tag) |
 
   > ✅ **Enforced in CI.** [scripts/check-size.ts](../../web/scripts/check-size.ts) (`npm run size`, run after Build in `ci.yml`) fails if the gzipped JS total exceeds **40 KB** or the gzipped CSS total exceeds **5 KB**. It also fails if `dist/assets` contains no JS. The README cites the same numbers. (`vite build` reports kB of 1,000 bytes; `check-size.ts` reports KiB, so the same bundle shows as 37.1 KB there.)
   >
-  > The JS budget was raised from 20 KB to 28 KB on 2026-10-12 (D15), then to 40 KB on 2026-10-13 (D16), after the tokenizer (about 7 KB gzipped), the explanation content and the command catalog were implemented and measured. 40 KB still leaves headroom while catching a framework-sized dependency.
+  > The JS budget was raised from 20 KB to 28 KB on 2026-10-12 (D15), then to 40 KB later the same day (D16), after the tokenizer (about 7 KB gzipped), the explanation content and the command catalog were implemented and measured. 40 KB still leaves headroom while catching a framework-sized dependency.
 
 - **ARCH-16 Runtime work.** Tokenizing and `getExplanation` both run once per token per example switch (memoised, ARCH-4). Both are O(n) in the example size. No virtualisation is needed.
 
@@ -288,7 +291,7 @@ Treat this as a new spec, not an extension of an existing one.
 | D13 | Automated accessibility checks run in the E2E layer (axe-core), not in jsdom                                        | jsdom cannot compute real colours, layout or target sizes                                                                                              | Accepted 2026-10-11; see ARCH-29                    |
 | D14 | No `CNAME` file; the Pages setting plus this spec are the record of the custom domain                               | GitHub ignores `CNAME` for Actions deployments                                                                                                         | Accepted 2026-10-11; see ARCH-23                    |
 | D15 | JS budget raised from 20 KB to 28 KB gzipped; content stays bundled, not lazy-loaded                                | Keeps explanation lookup synchronous with no loading states, while fitting the target tokenizer, content and command catalog                           | Superseded by D16                                   |
-| D16 | JS budget raised from 28 KB to 40 KB gzipped after measuring the implemented tokenizer, content and catalog         | Every token's tooltip and accessible name need `short` at first render, so content can't be deferred without changing that; 40 KB keeps headroom       | Accepted 2026-10-13; see ARCH-15, EXP-41, CMDX-20   |
+| D16 | JS budget raised from 28 KB to 40 KB gzipped after measuring the implemented tokenizer, content and catalog         | Every token's tooltip and accessible name need `short` at first render, so content can't be deferred without changing that; 40 KB keeps headroom       | Accepted 2026-10-12; see ARCH-15, EXP-41, CMDX-20   |
 
 ## 12. Verification checklist
 

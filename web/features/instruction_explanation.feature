@@ -32,3 +32,31 @@ Feature: Instruction explanation
     And I click the "--omit=dev" command fragment
     Then the explanation panel shows the title "--omit=dev"
     And I should see the text "skip installing dependencies of this type"
+
+  Scenario: The Dockerfile and the panel work with the keyboard alone
+    When I visit the home page
+    And I press Tab until the Dockerfile viewer has focus
+    Then focus is on the "FROM" token
+    When I press "ArrowDown"
+    And I press "Enter"
+    Then the explanation panel shows the title "WORKDIR"
+    And focus is on the "WORKDIR" token
+    When I press "Tab"
+    Then focus is inside the explanation panel
+    When I press "Escape"
+    Then the explanation panel is closed
+    And focus is on the "WORKDIR" token
+
+  Scenario: The panel sits beside the Dockerfile on wide screens
+    Given the viewport is 1280 by 800
+    When I visit the home page
+    And I click the "FROM" instruction
+    Then the explanation panel is between 320 and 480 pixels wide
+
+  Scenario: On narrow screens the panel is a bottom sheet that keeps the token visible
+    Given the viewport is 375 by 700
+    When I visit the home page
+    And I select the "Complex" example
+    And I click the "ENTRYPOINT" instruction
+    Then the explanation panel is pinned to the bottom of the viewport
+    And the "ENTRYPOINT" token is above the explanation panel

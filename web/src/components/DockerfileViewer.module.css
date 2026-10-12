@@ -16,6 +16,10 @@
   overflow: visible;
 }
 
+.grid {
+  display: block;
+}
+
 .line {
   display: flex;
   align-items: baseline;
@@ -141,7 +145,13 @@
   background: var(--c-flag-bg);
 }
 
-/* Active / selected token */
+/* Active / selected token (PNL-33) */
+.active {
+  background: var(--c-surface-3);
+  outline: 1px solid var(--c-accent);
+  outline-offset: 1px;
+}
+
 .active.type-keyword {
   background: var(--c-keyword-bg);
   outline: 1px solid var(--c-keyword);
