@@ -24,12 +24,12 @@ Users can ask for a Dockerfile shaped to their own needs ("use Python 3.13 and r
 
 The feature is built on the **Prompt API** (`LanguageModel`), which is available to web pages from Chrome 148, uses Gemini Nano on the device, and needs no origin-trial token.
 
-| Option considered     | Status on the web (2026-10) | Fit                                                                                                                   | Decision |
-| --------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------- | -------- |
-| Prompt API            | Chrome 148 stable           | General instructions, system prompt, structured output (`responseConstraint`), streaming, abort, context measurement. | **Use**  |
-| Rewriter API          | Developer and origin trial  | Built for prose (tone, length, format of text); no structured output; would need an origin-trial token that expires.  | No       |
-| Writer API            | Developer and origin trial  | Writes new prose from a prompt; same limits as the Rewriter API.                                                      | No       |
-| Server or cloud model | —                           | Violates P1 and P2, and needs secrets and a backend the static site doesn't have (ARCH-24).                           | No       |
+| Option considered     | Status on the web (2026-10) | Fit                                                                                                                  | Decision |
+| --------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------- | -------- |
+| Prompt API            | Chrome 148 stable           | General instructions, system prompt, streaming, abort, context measurement.                                          | **Use**  |
+| Rewriter API          | Developer and origin trial  | Built for prose (tone, length, format of text); no structured output; would need an origin-trial token that expires. | No       |
+| Writer API            | Developer and origin trial  | Writes new prose from a prompt; same limits as the Rewriter API.                                                     | No       |
+| Server or cloud model | —                           | Violates P1 and P2, and needs secrets and a backend the static site doesn't have (ARCH-24).                          | No       |
 
 **Platform facts this spec relies on** (from the platform docs above; re-check them whenever the docs change):
 
@@ -37,7 +37,7 @@ The feature is built on the **Prompt API** (`LanguageModel`), which is available
 - **AIR-2** `LanguageModel.availability(options)` resolves to `"unavailable"`, `"downloadable"`, `"downloading"` or `"available"`. It must be called with the same options as the later session (`expectedInputs`, `expectedOutputs`), because support can depend on them.
 - **AIR-3** When the model still has to be downloaded, `LanguageModel.create()` needs **user activation** (a click or key press), and reports progress through a `monitor` callback's `downloadprogress` events (`loaded` from 0 to 1).
 - **AIR-4** The API is available to top-level documents and same-origin iframes (Permissions Policy `language-model`), not in Web Workers.
-- **AIR-5** Sessions have a context window (`contextWindow`, `contextUsage`, `measureContextUsage()`); a prompt that can't fit fails with `QuotaExceededError`. `prompt()` and `promptStreaming()` accept an `AbortSignal` and a `responseConstraint` (a JSON Schema); `destroy()` frees a session; `clone()` copies its initial prompts.
+- **AIR-5** Sessions have a context window (`contextWindow`, `contextUsage`, `measureContextUsage()`); a prompt that can't fit fails with `QuotaExceededError`. `prompt()` and `promptStreaming()` accept an `AbortSignal` (and a `responseConstraint`, which this feature doesn't use, AIR-22); `destroy()` frees a session; `clone()` copies its initial prompts.
 - **AIR-6** On the web, sampling parameters (`temperature`, `topK`) are not available; this spec doesn't use them, and output is not deterministic.
 
 ## 3. Availability: when the feature exists
@@ -64,8 +64,8 @@ flowchart TD
 | `ai/types.ts`                  | Browser    | Minimal local type declarations for the parts of `LanguageModel` used here (no new dependency).                                                                         |
 | `ai/support.ts`                | Browser    | `SESSION_OPTIONS` (AIR-14) and `findLanguageModel()`, the AIR-7 check. Tiny and in the main bundle.                                                                     |
 | `ai/language-model.ts`         | Browser    | `rewriteDockerfile()`: the base session with download monitoring (AIR-15, AIR-17), context check, prompting, validation and error mapping to `RewriteError` codes (§7). |
-| `data/rewrite/prompt.ts`       | Data, pure | The system prompt, the user message builder and the JSON Schema (§6).                                                                                                   |
-| `data/rewrite/validate.ts`     | Data, pure | Parses the model's JSON and validates the Dockerfile with the tokenizer (AIR-22). Node-tested (ARCH-17).                                                                |
+| `data/rewrite/prompt.ts`       | Data, pure | The system prompt and the user message builder (§6).                                                                                                                    |
+| `data/rewrite/validate.ts`     | Data, pure | Parses the model's Markdown reply and validates the Dockerfile with the tokenizer (AIR-22, AIR-25). Node-tested (ARCH-17).                                              |
 | `data/rewrite/diff.ts`         | Data, pure | Line diff between the current and rewritten Dockerfile, for the review view (AIR-25).                                                                                   |
 | `components/RewriteButton.tsx` | UI         | The header button. On click, loads the dialog chunk and opens it.                                                                                                       |
 | `components/RewriteDialog.tsx` | UI         | The dialog (§5): request, download progress, generation, review, apply.                                                                                                 |
@@ -112,30 +112,34 @@ The dialog is a native `<dialog>` opened with `showModal()`. Unlike the explanat
 
 ## 6. Prompt and output
 
-- **AIR-22** **Structured output.** Every request passes `responseConstraint` with this JSON Schema, and the reply is parsed with `JSON.parse`:
+- **AIR-22** **Reply format: Markdown, not JSON.** The model replies with the rewritten Dockerfile in a fenced code block, followed by a "Changes:" bullet list. No `responseConstraint` is used.
 
-  ```json
-  {
-    "type": "object",
-    "properties": {
-      "dockerfile": { "type": "string" },
-      "changes": { "type": "array", "items": { "type": "string" }, "maxItems": 8 }
-    },
-    "required": ["dockerfile", "changes"],
-    "additionalProperties": false
-  }
+  ````markdown
+  ```dockerfile
+  FROM node:26-alpine
+  …
   ```
 
+  Changes:
+
+  - Runs the app as the non-root node user.
+  ````
+
+  > Changed 2026-10-12. The first implementation constrained replies to a JSON Schema (`{ dockerfile, changes }`). On Chrome's model this cut every exec form short: the model wrote `CMD ["node", "server.js"]` with unescaped quotes, and the constraint ended the JSON string at the first `"`, leaving `CMD [`. Dockerfiles are full of quotes, so code goes in a fenced block instead, where nothing needs escaping.
+
 - **AIR-23** **System prompt** (initial prompt of the base session, AIR-15). Kept in `data/rewrite/prompt.ts`, covered by a snapshot test, and reviewed like content. It says, in short:
-  - You rewrite Dockerfiles. Reply with the complete rewritten Dockerfile in `dockerfile` and up to 8 short, plain-English bullet points in `changes`, one per meaningful change.
-  - Keep everything the user didn't ask to change. Don't invent files, scripts, ports or package names the original doesn't imply; if the request needs one, use a clearly named placeholder and say so in `changes`.
+  - You rewrite Dockerfiles. Reply in exactly the AIR-22 format: the complete rewritten Dockerfile in a `dockerfile` code block, then up to 8 short, plain-English bullet points under "Changes:", one per meaningful change.
+  - Keep everything the user didn't ask to change. Don't invent files, scripts, ports or package names the original doesn't imply; if the request needs one, use a clearly named placeholder and say so under "Changes".
   - Never put secrets, tokens or passwords in the Dockerfile; suggest build secrets (`RUN --mount=type=secret`) instead.
-  - Output only valid Dockerfile syntax: no Markdown fences, no prose inside `dockerfile`.
+  - Inside the code block, write only valid Dockerfile syntax and no prose.
 - **AIR-24** **User message.** The request text and the current Dockerfile, each between clearly marked delimiters (`<request>…</request>`, `<dockerfile>…</dockerfile>`), built by a pure function. The request is limited to 500 characters (AIR-16) and the Dockerfile to 16 KB; before prompting, `measureContextUsage()` checks that the message fits the session's free context, and if not the dialog shows the "too long" error without prompting.
 - **AIR-25** **Validation.** `validate.ts` accepts a reply only if:
-  - it parses and matches the schema;
-  - `dockerfile`, after trimming and removing a single surrounding Markdown code fence if the model added one anyway, is non-empty, at most 16 KB and at most 400 lines;
-  - tokenizing it (tokenizer.md) yields at least one `FROM` instruction and **no `unknown` lines** (TOK-13), i.e. every non-blank, non-comment line belongs to an instruction.
+  - it contains a closed fenced code block (an unclosed one means the reply was cut off); text before and after the block is ignored, except for the changes;
+  - the block's content, trimmed, is non-empty, at most 16 KB and at most 400 lines;
+  - tokenizing it (tokenizer.md) yields at least one `FROM` instruction and **no `unknown` lines** (TOK-13), i.e. every non-blank, non-comment line belongs to an instruction;
+  - no `CMD` or `ENTRYPOINT` starts a JSON array that isn't valid exec form (`CMD [` or `CMD ["node", "ser`). Docker would silently run such a line as shell form, so it signals a cut-off reply. `RUN [ -f x ]` shell tests are allowed.
+
+  Changes are the `-`, `*` or numbered list items after the block; the first 8 non-empty ones are kept.
 
   The diff (`diff.ts`) is a line-based longest-common-subsequence diff, rendered as text lines prefixed `+`/`-`/` ` with colour as a secondary cue only.
 
@@ -175,7 +179,7 @@ The dialog is a native `<dialog>` opened with `showModal()`. Unlike the explanat
 **Future extensions:**
 
 - **Paste your own Dockerfile**, reusing AIR-25 validation and the **Rewritten** example slot.
-- **Streaming preview** of the Dockerfile as it is generated, once partial JSON can be rendered safely, or by moving `changes` to a second request.
+- **Streaming preview** of the Dockerfile as it is generated, rendering the code block's lines as they arrive.
 - **Explain the diff:** link each `changes` item to the lines it touches.
 - **Other languages**, by widening AIR-14's `languages` together with the site's own localization.
 
@@ -183,15 +187,15 @@ The dialog is a native `<dialog>` opened with `showModal()`. Unlike the explanat
 
 The real model is unavailable in CI (Puppeteer's Chrome for Testing has no `LanguageModel`), so all automated tests use a **fake** `LanguageModel` with scripted availability, download progress, replies, delays and errors: [fake-language-model.ts](../../web/src/__tests__/fake-language-model.ts) for unit tests, and an equivalent injected through `evaluateOnNewDocument` for E2E. jsdom has no modal dialogs, so [setup.ts](../../web/src/__tests__/setup.ts) emulates `showModal()`, `close()` and Escape.
 
-| Layer   | What                                                                                                                                                                                                                                                                                                                           |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Pure    | `rewrite.test.ts` (Node): the user message builder and delimiters; the response schema; the system prompt snapshot; validation (valid file, fenced file, prose, empty, too large, too many lines, no `FROM`, `unknown` lines, schema violations, long changes); the diff.                                                      |
-| Support | `App.test.tsx` › "rewrite" (AIR-7/8): no `LanguageModel` → no button; each `availability()` result; a throwing `availability()`; the check never calls `create()`.                                                                                                                                                             |
-| Dialog  | `RewriteDialog.test.tsx` with the fake model: every state in §5.2; `create()` only after a click when downloadable (AIR-17); progress updates; one base session and destroyed clones (AIR-15); Stop/Escape abort and destroy the clone (AIR-20); each error row of §7; the fixed error strings (AIR-27); focus moves (AIR-29). |
-| App     | `App.test.tsx` › "rewrite": Open in viewer adds and selects **Rewritten** and closes the panel, its tokens open explanations, rewriting again uses it as the base, `df-example` never stores it, the button disappears when the model goes away (AIR-9).                                                                       |
-| E2E     | `rewrite.feature`: with `LanguageModel` removed, the button is absent; with the fake, a full flow from request to the explained **Rewritten** example with no CSP violations; axe with the review open in both colour schemes.                                                                                                 |
-| Budget  | `npm run size` checks the entry and each lazy chunk separately (AIR-13).                                                                                                                                                                                                                                                       |
-| Manual  | Before release, on a supported desktop: the first-use download, then each suggestion chip on each bundled example; record the results as a short checklist in the PR. Model output is non-deterministic (AIR-6), so this is a spot check, not a golden test.                                                                   |
+| Layer   | What                                                                                                                                                                                                                                                                                                                                                           |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pure    | `rewrite.test.ts` (Node): the user message builder and delimiters; the system prompt snapshot; parsing and validation (valid reply with exec-form quotes intact, text around the block, bullet styles, no block, unclosed block, prose, empty, too large, too many lines, no `FROM`, `unknown` lines, cut-off exec forms, long and surplus changes); the diff. |
+| Support | `App.test.tsx` › "rewrite" (AIR-7/8): no `LanguageModel` → no button; each `availability()` result; a throwing `availability()`; the check never calls `create()`.                                                                                                                                                                                             |
+| Dialog  | `RewriteDialog.test.tsx` with the fake model: every state in §5.2; `create()` only after a click when downloadable (AIR-17); progress updates; one base session and destroyed clones (AIR-15); Stop/Escape abort and destroy the clone (AIR-20); each error row of §7; the fixed error strings (AIR-27); focus moves (AIR-29).                                 |
+| App     | `App.test.tsx` › "rewrite": Open in viewer adds and selects **Rewritten** and closes the panel, its tokens open explanations, rewriting again uses it as the base, `df-example` never stores it, the button disappears when the model goes away (AIR-9).                                                                                                       |
+| E2E     | `rewrite.feature`: with `LanguageModel` removed, the button is absent; with the fake, a full flow from request to the explained **Rewritten** example with no CSP violations; axe with the review open in both colour schemes.                                                                                                                                 |
+| Budget  | `npm run size` checks the entry and each lazy chunk separately (AIR-13).                                                                                                                                                                                                                                                                                       |
+| Manual  | Before release, on a supported desktop: the first-use download, then each suggestion chip on each bundled example; record the results as a short checklist in the PR. Model output is non-deterministic (AIR-6), so this is a spot check, not a golden test.                                                                                                   |
 
 ## 12. Related changes in other documents
 

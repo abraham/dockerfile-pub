@@ -1,40 +1,22 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import {
-  DOCKERFILE_MAX_LINES,
-  RESPONSE_SCHEMA,
-  SYSTEM_PROMPT,
-  buildUserMessage,
-} from '../data/rewrite/prompt';
+import { DOCKERFILE_MAX_LINES, SYSTEM_PROMPT, buildUserMessage } from '../data/rewrite/prompt';
 import { parseReply } from '../data/rewrite/validate';
 import { diffLines } from '../data/rewrite/diff';
 import { truncate } from '../data/text';
+import { markdownReply as reply } from './fake-language-model';
 
 const FILE = 'FROM alpine:3.20\nRUN apk add --no-cache curl\nCMD ["curl", "--version"]';
-const reply = (dockerfile: unknown, changes: unknown = ['A change.']) =>
-  JSON.stringify({ dockerfile, changes });
 const reason = (text: string) => {
   const parsed = parseReply(text);
   return parsed.ok ? null : parsed.reason;
 };
 
-describe('prompt (AIR-22 to AIR-24)', () => {
+describe('prompt (AIR-23, AIR-24)', () => {
   it('wraps the request and Dockerfile in delimiters, trimmed', () => {
     expect(buildUserMessage('  use alpine \n', '\nFROM node\n\n')).toBe(
       '<request>\nuse alpine\n</request>\n\n<dockerfile>\nFROM node\n</dockerfile>',
     );
-  });
-
-  it('constrains replies to { dockerfile, changes }', () => {
-    expect(RESPONSE_SCHEMA).toEqual({
-      type: 'object',
-      properties: {
-        dockerfile: { type: 'string' },
-        changes: { type: 'array', items: { type: 'string' }, maxItems: 8 },
-      },
-      required: ['dockerfile', 'changes'],
-      additionalProperties: false,
-    });
   });
 
   it('keeps the reviewed system prompt', () => {
@@ -42,39 +24,52 @@ describe('prompt (AIR-22 to AIR-24)', () => {
   });
 });
 
-describe('parseReply (AIR-25, AIR-26)', () => {
-  it('accepts a valid reply', () => {
+describe('parseReply (AIR-22, AIR-25, AIR-26)', () => {
+  it('accepts a valid reply, keeping exec-form quotes intact', () => {
     expect(parseReply(reply(FILE, ['Uses curl.']))).toEqual({
       ok: true,
       value: { dockerfile: FILE, changes: ['Uses curl.'] },
     });
   });
 
-  it('trims the Dockerfile and removes one surrounding code fence', () => {
-    const fenced = parseReply(reply(`\n\`\`\`dockerfile\n${FILE}\n\`\`\`\n`));
-    expect(fenced.ok && fenced.value.dockerfile).toBe(FILE);
+  it('ignores text around the block and accepts a fence without a language', () => {
+    const parsed = parseReply(`Here you go:\n\n\`\`\`\n\n${FILE}\n\n\`\`\`\nDone.`);
+    expect(parsed).toEqual({ ok: true, value: { dockerfile: FILE, changes: [] } });
   });
 
-  it('trims changes, drops empty ones and cuts long ones at 200 characters', () => {
-    const parsed = parseReply(reply(FILE, ['  a  ', '', 'x'.repeat(250)]));
-    expect(parsed.ok && parsed.value.changes).toEqual(['a', `${'x'.repeat(199)}…`]);
+  it('reads -, * and numbered bullets after the block, trimmed, cut at 200 and at most 8', () => {
+    const text = `${reply(FILE)}\n* star\n2. numbered\n-   \n- ${'x'.repeat(250)}\nplain text`;
+    const parsed = parseReply(text);
+    expect(parsed.ok && parsed.value.changes).toEqual(['star', 'numbered', `${'x'.repeat(199)}…`]);
+    const many = parseReply(
+      reply(
+        FILE,
+        Array.from({ length: 10 }, (_, i) => `c${i}`),
+      ),
+    );
+    expect(many.ok && many.value.changes).toHaveLength(8);
+  });
+
+  it('allows RUN commands that start with a shell test bracket', () => {
+    expect(reason(reply(`${FILE}\nRUN [ -f /etc/os-release ] || exit 1`))).toBeNull();
   });
 
   it.each([
-    ['prose instead of JSON', 'Here is your Dockerfile: FROM node', 'not JSON'],
-    ['a JSON array', '[]', 'not an object'],
-    ['a missing field', JSON.stringify({ dockerfile: FILE }), 'schema mismatch'],
+    ['prose without a code block', 'Here is your Dockerfile: FROM node', 'no code block'],
     [
-      'an extra field',
-      JSON.stringify({ dockerfile: FILE, changes: [], note: 'x' }),
-      'schema mismatch',
+      'a block cut off before its closing fence',
+      '```dockerfile\nFROM node\nCMD ["no',
+      'unclosed code block',
     ],
-    ['non-string changes', reply(FILE, [1]), 'schema mismatch'],
-    ['more than 8 changes', reply(FILE, Array<string>(9).fill('c')), 'schema mismatch'],
-    ['a non-string Dockerfile', reply(42), 'schema mismatch'],
     ['an empty Dockerfile', reply('  '), 'empty'],
     ['prose inside the Dockerfile', reply(`Sure! Here it is:\n${FILE}`), 'unknown line'],
     ['no FROM', reply('RUN echo hi'), 'no FROM'],
+    ['a CMD cut off after its bracket', reply('FROM node\nCMD ['), 'broken exec form'],
+    [
+      'an ENTRYPOINT cut off mid-array',
+      reply('FROM node\nENTRYPOINT ["node", "ser'),
+      'broken exec form',
+    ],
     ['too many lines', reply(`${FILE}\n${'# x\n'.repeat(DOCKERFILE_MAX_LINES)}`), 'too many lines'],
     ['more than 16 KB', reply(`${FILE}\n# ${'é'.repeat(9000)}`), 'too large'],
   ])('rejects %s', (_, text, expected) => {
