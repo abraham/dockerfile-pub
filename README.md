@@ -13,7 +13,8 @@ Click any part of a Dockerfile (instructions, flags, arguments, variables, shell
 - **Accessible** — the Dockerfile is one tab stop with arrow-key navigation, the panel is non-modal and returns focus on close, changes are announced to screen readers, and axe checks run in CI
 - **Responsive** — adapts from desktop side-panel layout to a mobile bottom-sheet
 - **Light + dark modes** — follows the OS preference via `prefers-color-scheme`
-- **Small bundle** — under 40 KB gzipped, built with [Preact](https://preactjs.com/) and [Vite](https://vite.dev/)
+- **Rewrite with on-device AI** — in desktop Chrome with the built-in model, describe what you need (smaller image, non-root user, …), review the AI's changes and diff, then explore the rewritten Dockerfile like the examples. It runs on your device; nothing is sent to a server, and the button doesn't appear in other browsers
+- **Small bundle** — under 40 KB gzipped, built with [Preact](https://preactjs.com/) and [Vite](https://vite.dev/); the AI dialog is a separate chunk loaded on first use
 
 ## Getting started
 
@@ -49,8 +50,8 @@ npm test
 
 The test suite covers:
 
-- **Unit tests** — tokenizer invariants, reference examples and golden fixtures (`tokenizer.test.ts`); explanation content, rich text and generators (`content.test.ts`); command explanations and the command catalog (`commands.test.ts`)
-- **UI tests** — example toggling, panel open/close, Escape, focus return, "See also" and Back, viewer keyboard navigation, documentation links, copy button behaviour (`App.test.tsx`, `ExplanationPanel.test.tsx`, `ExplanationContent.test.tsx`, `CopyButton.test.tsx`)
+- **Unit tests** — tokenizer invariants, reference examples and golden fixtures (`tokenizer.test.ts`); explanation content, rich text and generators (`content.test.ts`); command explanations and the command catalog (`commands.test.ts`); AI prompt, reply validation and diff (`rewrite.test.ts`)
+- **UI tests** — example toggling, panel open/close, Escape, focus return, "See also" and Back, viewer keyboard navigation, documentation links, copy button behaviour, and the AI rewrite against a fake on-device model (`App.test.tsx`, `ExplanationPanel.test.tsx`, `ExplanationContent.test.tsx`, `CopyButton.test.tsx`, `RewriteDialog.test.tsx`)
 
 ### Feature tests (end-to-end)
 
@@ -111,7 +112,7 @@ npm run build
 npm run size   # fails if the bundle exceeds its budget
 ```
 
-Outputs a static bundle to `web/dist/`. The production build is ~121 KB JS and ~14 KB CSS before gzip (~40 KB and ~4 KB gzipped). `npm run size` fails if gzipped JS exceeds 40 KB or gzipped CSS exceeds 5 KB.
+Outputs a static bundle to `web/dist/`. The production build is ~123 KB JS and ~15 KB CSS before gzip (~40 KB and ~4 KB gzipped), plus the lazy AI rewrite chunk (~4 KB JS and ~1 KB CSS gzipped). `npm run size` fails if the gzipped entry JS exceeds 40 KB, a lazy JS chunk exceeds 8 KB, or all gzipped CSS exceeds 5 KB.
 
 ### Preview production build
 
@@ -137,6 +138,7 @@ web/
 │   ├── example_switcher.feature         Example toggle tests
 │   ├── reduced_motion.feature           Reduced-motion tests
 │   ├── accessibility.feature            axe-core WCAG checks
+│   ├── rewrite.feature                  AI rewrite flow with a fake model
 │   ├── step_definitions/      Cucumber step implementations
 │   └── support/               World + hooks (browser lifecycle)
 ├── src/
@@ -154,24 +156,34 @@ web/
 │   │   ├── ExplanationPanel.module.css
 │   │   ├── ExplanationContent.tsx    Renders one explanation
 │   │   ├── RichText.tsx              Inline code, paragraphs and lists
-│   │   └── RichText.module.css
+│   │   ├── RichText.module.css
+│   │   ├── RewriteButton.tsx         Shown only with on-device AI; lazy-loads the dialog
+│   │   ├── RewriteButton.module.css
+│   │   ├── RewriteDialog.tsx         Request, download, review and apply an AI rewrite
+│   │   └── RewriteDialog.module.css
+│   ├── ai/                    Chrome Prompt API: support check, session, prompting
 │   ├── data/
 │   │   ├── examples.ts        Three Dockerfile texts
 │   │   ├── tokenizer/         Dockerfile → lines of tokens with explanation refs
 │   │   ├── content/           Explanation schema, rich text, static entries, generators
 │   │   ├── commands/          Command catalog, resolver and shell syntax explanations
+│   │   ├── rewrite/           AI prompt, reply validation and line diff
+│   │   ├── text.ts            truncate()
 │   │   └── explanations.ts    getExplanation(ref): the lookup entry point
 │   ├── styles/
 │   │   └── global.css         Design tokens + CSS reset
 │   └── __tests__/
 │       ├── setup.ts
 │       ├── fixtures/          Dockerfiles for tokenizer golden tests
+│       ├── fake-language-model.ts  Scripted stand-in for Chrome's LanguageModel
 │       ├── tokenizer.test.ts
 │       ├── content.test.ts
 │       ├── commands.test.ts
+│       ├── rewrite.test.ts
 │       ├── App.test.tsx
 │       ├── ExplanationPanel.test.tsx
 │       ├── ExplanationContent.test.tsx
+│       ├── RewriteDialog.test.tsx
 │       └── CopyButton.test.tsx
 ```
 
@@ -189,6 +201,7 @@ The specs in [docs/specs/](./docs/specs/) are the source of truth:
 | [run-command-explanations.md](./docs/specs/run-command-explanations.md)   | Explanations for shell and exec-form commands                   |
 | [explanation-panel.md](./docs/specs/explanation-panel.md)                 | Panel behaviour, layout, keyboard and accessibility             |
 | [github-workflows.md](./docs/specs/github-workflows.md)                   | CI, deploy and Dependabot                                       |
+| [ai-rewrite.md](./docs/specs/ai-rewrite.md)                               | Rewrite a Dockerfile with on-device AI                          |
 
 ## Contributing
 

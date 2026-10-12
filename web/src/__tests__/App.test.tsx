@@ -1,7 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/preact';
 import userEvent from '@testing-library/user-event';
 import { App } from '../App';
+import { EXAMPLES } from '../data/examples';
+import { fakeLanguageModel, VALID_DOCKERFILE } from './fake-language-model';
 
 // Mock clipboard API (navigator.clipboard is not available in jsdom)
 Object.defineProperty(navigator, 'clipboard', {
@@ -302,6 +304,121 @@ describe('App', () => {
       fireEvent.click(token(/^WORKDIR:/));
       expect(tabStops()).toHaveLength(1);
       expect(tabStops()[0]).toHaveTextContent('WORKDIR');
+    });
+  });
+
+  describe('rewrite (ai-rewrite.md)', () => {
+    const rewriteButton = () =>
+      screen.queryByRole('button', { name: 'Rewrite this Dockerfile with on-device AI' });
+
+    beforeEach(() => {
+      vi.spyOn(console, 'debug').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    async function openRewrite(user: ReturnType<typeof userEvent.setup>, request: string) {
+      await user.click(await screen.findByRole('button', { name: /rewrite this dockerfile/i }));
+      await user.type(await screen.findByLabelText('What do you need?'), request);
+      await user.click(screen.getByRole('button', { name: 'Rewrite' }));
+    }
+
+    it('is absent without the Prompt API (AIR-8)', async () => {
+      render(<App />);
+      await Promise.resolve();
+      expect(rewriteButton()).not.toBeInTheDocument();
+    });
+
+    it.each(['downloadable', 'downloading', 'available'] as const)(
+      'is shown when the model is %s (AIR-7)',
+      async (availability) => {
+        const fake = fakeLanguageModel({ availability });
+        vi.stubGlobal('LanguageModel', fake.model);
+        render(<App />);
+        expect(
+          await screen.findByRole('button', { name: /rewrite this dockerfile/i }),
+        ).toHaveTextContent('Rewrite');
+        expect(fake.availability).toHaveBeenCalledWith({
+          expectedInputs: [{ type: 'text', languages: ['en'] }],
+          expectedOutputs: [{ type: 'text', languages: ['en'] }],
+        });
+        expect(fake.create).not.toHaveBeenCalled();
+      },
+    );
+
+    it('is absent when the model is unavailable or the check fails (AIR-8)', async () => {
+      const fake = fakeLanguageModel({ availability: 'unavailable' });
+      vi.stubGlobal('LanguageModel', fake.model);
+      const { unmount } = render(<App />);
+      await waitFor(() => expect(fake.availability).toHaveBeenCalled());
+      await Promise.resolve();
+      expect(rewriteButton()).not.toBeInTheDocument();
+      unmount();
+
+      fake.availability.mockRejectedValue(new Error('boom'));
+      render(<App />);
+      await waitFor(() => expect(fake.availability).toHaveBeenCalledTimes(2));
+      await Promise.resolve();
+      expect(rewriteButton()).not.toBeInTheDocument();
+    });
+
+    it('opens the result as an explainable, unsaved Rewritten example (AIR-21)', async () => {
+      const user = userEvent.setup();
+      vi.stubGlobal('LanguageModel', fakeLanguageModel().model);
+      render(<App />);
+      await user.click(screen.getByRole('button', { name: /average/i }));
+      await openRewrite(user, 'Run as a non-root user');
+      await user.click(await screen.findByRole('button', { name: 'Open in viewer' }));
+
+      const rewritten = screen.getByRole('button', { name: 'Rewritten' });
+      expect(rewritten).toHaveAttribute('aria-pressed', 'true');
+      expect(
+        screen.getByText('AI-generated, may be inaccurate: Run as a non-root user'),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(rewriteButton()).toHaveFocus();
+      expect(localStorage.getItem('df-example')).toBe('average');
+
+      await user.click(token(/^USER:/));
+      expect(heading()).toHaveAccessibleName('USER');
+      expect(panel()).toHaveAttribute('data-state', 'open');
+    });
+
+    it('closes the panel when a rewrite is applied', async () => {
+      const user = userEvent.setup();
+      vi.stubGlobal('LanguageModel', fakeLanguageModel().model);
+      render(<App />);
+      await user.click(token(/^FROM:/));
+      await openRewrite(user, 'Smaller');
+      await user.click(await screen.findByRole('button', { name: 'Open in viewer' }));
+      expect(panel()).toHaveAttribute('data-state', 'closed');
+    });
+
+    it('rewrites the Rewritten example when it is selected', async () => {
+      const user = userEvent.setup();
+      const fake = fakeLanguageModel();
+      vi.stubGlobal('LanguageModel', fake.model);
+      render(<App />);
+      await openRewrite(user, 'First');
+      await user.click(await screen.findByRole('button', { name: 'Open in viewer' }));
+      await openRewrite(user, 'Second');
+      await screen.findByRole('button', { name: 'Open in viewer' });
+      expect(fake.prompts[0]).toContain(EXAMPLES.simple.content);
+      expect(fake.prompts[1]).toContain(VALID_DOCKERFILE);
+    });
+
+    it('checks availability again on close and hides the button if the model is gone (AIR-9)', async () => {
+      const user = userEvent.setup();
+      const fake = fakeLanguageModel();
+      vi.stubGlobal('LanguageModel', fake.model);
+      render(<App />);
+      await user.click(await screen.findByRole('button', { name: /rewrite this dockerfile/i }));
+      await screen.findByRole('dialog');
+      fake.availability.mockResolvedValue('unavailable');
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+      await waitFor(() => expect(rewriteButton()).not.toBeInTheDocument());
     });
   });
 });

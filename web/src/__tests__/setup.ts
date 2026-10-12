@@ -17,3 +17,23 @@ if (testGlobal.jsdom) {
     configurable: true,
   });
 }
+
+// jsdom has no modal dialogs: emulate showModal(), close() with its close event, and Escape.
+if (typeof HTMLDialogElement !== 'undefined' && !('showModal' in HTMLDialogElement.prototype)) {
+  Object.assign(HTMLDialogElement.prototype, {
+    showModal(this: HTMLDialogElement) {
+      this.setAttribute('open', '');
+      const onKeyDown = (event: KeyboardEvent) => {
+        if (event.key !== 'Escape') return;
+        document.removeEventListener('keydown', onKeyDown);
+        this.close();
+      };
+      document.addEventListener('keydown', onKeyDown);
+    },
+    close(this: HTMLDialogElement) {
+      if (!this.hasAttribute('open')) return;
+      this.removeAttribute('open');
+      this.dispatchEvent(new Event('close'));
+    },
+  });
+}

@@ -4,9 +4,13 @@ import { DockerfileViewer, revealToken, tokenElementId } from './components/Dock
 import { ExplanationPanel, PANEL_ID } from './components/ExplanationPanel';
 import type { PanelEntry } from './components/ExplanationPanel';
 import { CopyButton } from './components/CopyButton';
+import { RewriteButton } from './components/RewriteButton';
+import { findLanguageModel } from './ai/support';
+import type { LanguageModelStatic } from './ai/types';
 import { tokenize, refKey } from './data/tokenizer';
 import type { ExplanationRef } from './data/tokenizer';
 import { EXAMPLES } from './data/examples';
+import { truncate } from './data/text';
 import { getExplanation, flatten } from './data/explanations';
 import type { Explanation } from './data/explanations';
 import type { ResolvedToken } from './components/DockerfileViewer';
@@ -14,6 +18,13 @@ import styles from './App.module.css';
 
 const EXAMPLE_KEYS = Object.keys(EXAMPLES);
 const MAX_STACK = 20;
+/** The in-memory example added by an AI rewrite; never persisted (AIR-21). */
+const REWRITTEN = 'rewritten';
+
+interface Rewritten {
+  content: string;
+  request: string;
+}
 
 /** The open panel: the token that opened it and the explanations shown since (§3). */
 type PanelState = { sourceTokenId: string; stack: PanelEntry[] } | null;
@@ -34,6 +45,8 @@ function loadSavedExample(): string {
 
 export function App() {
   const [activeExample, setActiveExample] = useState(loadSavedExample);
+  const [rewritten, setRewritten] = useState<Rewritten | null>(null);
+  const [languageModel, setLanguageModel] = useState<LanguageModelStatic | null>(null);
   const [panel, setPanel] = useState<PanelState>(null);
   const panelRef = useRef(panel);
   useLayoutEffect(() => {
@@ -41,9 +54,21 @@ export function App() {
   }, [panel]);
   const viewerSectionRef = useRef<HTMLElement>(null);
 
+  const content =
+    activeExample === REWRITTEN && rewritten ? rewritten.content : EXAMPLES[activeExample].content;
+  const description =
+    activeExample === REWRITTEN && rewritten
+      ? `AI-generated, may be inaccurate: ${truncate(rewritten.request, 80)}`
+      : EXAMPLES[activeExample].description;
+
+  const checkLanguageModel = useCallback(() => {
+    void findLanguageModel().then(setLanguageModel);
+  }, []);
+  useEffect(checkLanguageModel, [checkLanguageModel]);
+
   const lines = useMemo(
     () =>
-      tokenize(EXAMPLES[activeExample].content).map((line) => ({
+      tokenize(content).map((line) => ({
         ...line,
         tokens: line.tokens.map((token) => {
           const explanation = getExplanation(token.ref);
@@ -54,7 +79,7 @@ export function App() {
           };
         }),
       })),
-    [activeExample],
+    [content],
   );
 
   const handleTokenSelect = useCallback((token: ResolvedToken) => {
@@ -96,6 +121,7 @@ export function App() {
   const handleExampleChange = useCallback((key: string) => {
     setActiveExample(key);
     setPanel(null);
+    if (key === REWRITTEN) return;
     try {
       localStorage.setItem('df-example', key);
     } catch {
@@ -103,10 +129,17 @@ export function App() {
     }
   }, []);
 
-  const exampleList = useMemo(
-    () => EXAMPLE_KEYS.map((key) => ({ key, label: EXAMPLES[key].label })),
-    [],
-  );
+  const handleRewriteApply = useCallback((dockerfile: string, request: string) => {
+    setRewritten({ content: dockerfile, request });
+    setActiveExample(REWRITTEN);
+    setPanel(null);
+  }, []);
+
+  const hasRewritten = rewritten !== null;
+  const exampleList = useMemo(() => {
+    const list = EXAMPLE_KEYS.map((key) => ({ key, label: EXAMPLES[key].label }));
+    return hasRewritten ? [...list, { key: REWRITTEN, label: 'Rewritten' }] : list;
+  }, [hasRewritten]);
 
   const entry = panel ? panel.stack[panel.stack.length - 1] : null;
   const previous = panel && panel.stack.length > 1 ? panel.stack[panel.stack.length - 2] : null;
@@ -155,7 +188,7 @@ export function App() {
               onChange={handleExampleChange}
               examples={exampleList}
             />
-            <span class={styles.exampleDesc}>{EXAMPLES[activeExample].description}</span>
+            <span class={styles.exampleDesc}>{description}</span>
           </div>
           <span class={styles.hint}>
             {entry ? '' : 'Click any highlighted part of the Dockerfile to explore'}
@@ -177,7 +210,15 @@ export function App() {
               <span class={styles.dot} aria-hidden="true" />
               <span class={styles.dot} aria-hidden="true" />
               <span class={styles.fileName}>Dockerfile</span>
-              <CopyButton text={EXAMPLES[activeExample].content} />
+              <CopyButton text={content} />
+              {languageModel && (
+                <RewriteButton
+                  model={languageModel}
+                  dockerfile={content}
+                  onApply={handleRewriteApply}
+                  onClose={checkLanguageModel}
+                />
+              )}
             </div>
             <DockerfileViewer
               lines={lines}
