@@ -1,6 +1,6 @@
 import { SESSION_OPTIONS } from './support';
 import type { LanguageModelSession, LanguageModelStatic } from './types';
-import { RESPONSE_SCHEMA, SYSTEM_PROMPT, buildUserMessage } from '../data/rewrite/prompt';
+import { SYSTEM_PROMPT, buildUserMessage } from '../data/rewrite/prompt';
 import { parseReply } from '../data/rewrite/validate';
 import type { RewriteResult } from '../data/rewrite/validate';
 
@@ -119,7 +119,7 @@ export async function rewriteDockerfile(
   }
   try {
     const input = buildUserMessage(request, dockerfile);
-    const options = { signal, responseConstraint: RESPONSE_SCHEMA };
+    const options = { signal };
     const usage = await clone.measureContextUsage(input, options);
     if (usage > clone.contextWindow - clone.contextUsage) throw new RewriteError('too-long');
 

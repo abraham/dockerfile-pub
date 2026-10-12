@@ -20,10 +20,14 @@ RUN npm install
 USER node
 CMD ["node", "server.js"]`;
 
-export const VALID_REPLY = JSON.stringify({
-  dockerfile: VALID_DOCKERFILE,
-  changes: ['Runs the app as the non-root node user.'],
-});
+/** A reply in the format the system prompt asks for (AIR-22). */
+export function markdownReply(dockerfile: string, changes: string[] = []): string {
+  return `\`\`\`dockerfile\n${dockerfile}\n\`\`\`\n\nChanges:\n${changes.map((c) => `- ${c}`).join('\n')}`;
+}
+
+export const VALID_REPLY = markdownReply(VALID_DOCKERFILE, [
+  'Runs the app as the non-root node user.',
+]);
 
 export interface FakeOptions {
   availability?: Availability;
@@ -95,6 +99,13 @@ export function fakeLanguageModel(options: FakeOptions = {}) {
   });
 
   const availability = vi.fn(() => Promise.resolve(options.availability ?? 'available'));
-  const model: LanguageModelStatic = { availability, create };
+  // Like Chrome's, a class whose constructor throws, so code that calls it fails here too.
+  const model: LanguageModelStatic = class {
+    static availability = availability;
+    static create = create;
+    constructor() {
+      throw new TypeError('Illegal constructor');
+    }
+  };
   return { model, create, availability, sessions, prompts };
 }

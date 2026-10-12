@@ -238,11 +238,7 @@ describe('RewriteDialog', () => {
         { promptError: new DOMException('secret', 'QuotaExceededError') },
         'too-long',
       ],
-      [
-        'the reply is not a Dockerfile',
-        { reply: '{"dockerfile":"Sure! secret","changes":[]}' },
-        'invalid',
-      ],
+      ['the reply is not a Dockerfile', { reply: 'Sure! secret' }, 'invalid'],
       [
         'the input is not supported',
         { promptError: new DOMException('secret', 'NotSupportedError') },
@@ -261,7 +257,7 @@ describe('RewriteDialog', () => {
     });
 
     it('Try again reruns the request', async () => {
-      const { user, prompts } = setup({ reply: '{"dockerfile":"oops","changes":[]}' });
+      const { user, prompts } = setup({ reply: 'oops' });
       await submit(user);
       await user.click(await screen.findByRole('button', { name: 'Try again' }));
       await waitFor(() => expect(prompts).toHaveLength(2));

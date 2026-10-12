@@ -10,11 +10,10 @@ export interface RewriteResult {
 export type ParsedReply = { ok: true; value: RewriteResult } | { ok: false; reason: string };
 
 const CHANGE_MAX_LENGTH = 200;
-const FENCED = /^```[^\n]*\n([\s\S]*?)\n?```$/;
-
-function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === 'string');
-}
+const CODE_BLOCK = /```[^\n]*\n([\s\S]*?)\n?```/;
+const BULLET = /^\s*(?:[-*•]|\d+[.)])\s+(.*)$/;
+// An exec form cut short (`CMD [` or `CMD ["node", "ser`) that Docker would run as shell form.
+const BROKEN_EXEC_FORM = /^\s*(?:CMD|ENTRYPOINT)\s+\[\s*(?:"|$)/i;
 
 /** Checks a Dockerfile from the model: size, at least one FROM, no unknown lines (AIR-25). */
 export function validateDockerfile(text: string): string | null {
@@ -24,41 +23,30 @@ export function validateDockerfile(text: string): string | null {
   const lines = tokenize(text);
   if (lines.some((line) => line.type === LINE_TYPE.UNKNOWN)) return 'unknown line';
   if (!lines.some((line) => line.instruction?.keyword === 'FROM')) return 'no FROM';
+  const broken = lines.some(
+    (line) =>
+      line.type === LINE_TYPE.INSTRUCTION &&
+      line.instruction?.form !== 'exec' &&
+      BROKEN_EXEC_FORM.test(line.raw),
+  );
+  if (broken) return 'broken exec form';
   return null;
 }
 
-/** Parses and validates the model's JSON reply (AIR-22, AIR-25, AIR-26). */
+/** Parses the model's reply: a fenced Dockerfile, then a bullet list of changes (AIR-22, AIR-25, AIR-26). */
 export function parseReply(reply: string): ParsedReply {
-  let data: unknown;
-  try {
-    data = JSON.parse(reply);
-  } catch {
-    return { ok: false, reason: 'not JSON' };
-  }
-  if (typeof data !== 'object' || data === null || Array.isArray(data)) {
-    return { ok: false, reason: 'not an object' };
-  }
-  const keys = Object.keys(data).sort().join(',');
-  const { dockerfile, changes } = data as Record<string, unknown>;
-  if (
-    keys !== 'changes,dockerfile' ||
-    typeof dockerfile !== 'string' ||
-    !isStringArray(changes) ||
-    changes.length > MAX_CHANGES
-  ) {
-    return { ok: false, reason: 'schema mismatch' };
-  }
-  const trimmed = dockerfile.trim();
-  const text = (FENCED.exec(trimmed)?.[1] ?? trimmed).trim();
+  const block = CODE_BLOCK.exec(reply);
+  if (!block)
+    return { ok: false, reason: reply.includes('```') ? 'unclosed code block' : 'no code block' };
+  const text = block[1].trim();
   const problem = validateDockerfile(text);
   if (problem) return { ok: false, reason: problem };
-  return {
-    ok: true,
-    value: {
-      dockerfile: text,
-      changes: changes
-        .map((change) => truncate(change, CHANGE_MAX_LENGTH))
-        .filter((change) => change.length > 0),
-    },
-  };
+  const changes = reply
+    .slice(block.index + block[0].length)
+    .split('\n')
+    .map((line) => BULLET.exec(line)?.[1] ?? '')
+    .map((change) => truncate(change, CHANGE_MAX_LENGTH))
+    .filter((change) => change.length > 0)
+    .slice(0, MAX_CHANGES);
+  return { ok: true, value: { dockerfile: text, changes } };
 }

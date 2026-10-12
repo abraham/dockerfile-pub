@@ -13,10 +13,12 @@ USER node
 EXPOSE 3000
 CMD ["node", "server.js"]`;
 
-const REPLY = JSON.stringify({
-  dockerfile: REWRITTEN_DOCKERFILE,
-  changes: ['Runs the app as the non-root node user.'],
-});
+const REPLY = `\`\`\`dockerfile
+${REWRITTEN_DOCKERFILE}
+\`\`\`
+
+Changes:
+- Runs the app as the non-root node user.`;
 
 declare global {
   interface Window {
@@ -49,9 +51,13 @@ Given('a fake on-device AI model', async function (this: PuppeteerWorld) {
     });
     Object.defineProperty(window, 'LanguageModel', {
       configurable: true,
-      value: {
-        availability: () => Promise.resolve('available'),
-        create: () => Promise.resolve(session()),
+      // A class, like Chrome's, whose constructor throws.
+      value: class {
+        static availability = () => Promise.resolve('available');
+        static create = () => Promise.resolve(session());
+        constructor() {
+          throw new TypeError('Illegal constructor');
+        }
       },
     });
   }, REPLY);

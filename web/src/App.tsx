@@ -62,7 +62,8 @@ export function App() {
       : EXAMPLES[activeExample].description;
 
   const checkLanguageModel = useCallback(() => {
-    void findLanguageModel().then(setLanguageModel);
+    // LanguageModel is a class; passed bare, setState would call it as an updater.
+    void findLanguageModel().then((model) => setLanguageModel(() => model));
   }, []);
   useEffect(checkLanguageModel, [checkLanguageModel]);
 

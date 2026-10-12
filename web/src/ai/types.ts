@@ -26,7 +26,6 @@ export interface LanguageModelCreateOptions extends LanguageModelOptions {
 
 export interface LanguageModelPromptOptions {
   signal?: AbortSignal;
-  responseConstraint?: object;
 }
 
 export interface LanguageModelSession {
