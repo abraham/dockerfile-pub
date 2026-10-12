@@ -65,7 +65,7 @@ describe('SidePanel', () => {
     const firstItem = screen.getByText(/type=cache — mounts a persistent cache directory\./i);
     const list = firstItem.closest('ul');
     expect(list).toBeInTheDocument();
-    expect(within(list).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(/** @type {HTMLElement} */ (list)).getAllByRole('listitem')).toHaveLength(3);
   });
 
   it('renders the syntax block', () => {

@@ -9,12 +9,10 @@ Given('the site is up', async function () {
     throw new Error(
       `Could not reach ${this.baseUrl} — is the dev server running? (${err.message})\n` +
         'Start it with: npm run dev',
+      { cause: err },
     );
   }
-  assert.ok(
-    response.ok,
-    `Expected ${this.baseUrl} to return a 2xx status, got ${response.status}`,
-  );
+  assert.ok(response.ok, `Expected ${this.baseUrl} to return a 2xx status, got ${response.status}`);
 });
 
 When('I visit the home page', async function () {
@@ -23,6 +21,20 @@ When('I visit the home page', async function () {
 
 Given('the viewport is {int} by {int}', async function (width, height) {
   await this.page.setViewport({ width, height });
+});
+
+Given('Content Security Policy violations are recorded', async function () {
+  await this.page.evaluateOnNewDocument(() => {
+    window.__cspViolations = [];
+    document.addEventListener('securitypolicyviolation', (e) => {
+      window.__cspViolations.push(`${e.violatedDirective} blocked ${e.blockedURI || 'inline'}`);
+    });
+  });
+});
+
+Then('no Content Security Policy violations were recorded', async function () {
+  const violations = await this.page.evaluate(() => window.__cspViolations);
+  assert.deepEqual(violations, [], `CSP violations: ${violations.join('; ')}`);
 });
 
 Then('the page title is {string}', async function (expectedTitle) {
@@ -54,41 +66,48 @@ When('I click the {string} instruction', async function (instruction) {
   const clicked = await this.page.evaluate((text) => {
     const region = document.querySelector('[aria-label="Dockerfile source"]');
     if (!region) return false;
-    const btn = [...region.querySelectorAll('button')].find(
-      (b) => b.textContent.trim() === text,
-    );
+    const btn = [...region.querySelectorAll('button')].find((b) => b.textContent.trim() === text);
     if (!btn) return false;
     btn.click();
     return true;
   }, instruction);
-  assert.ok(clicked, `Could not find a clickable "${instruction}" instruction in the Dockerfile viewer`);
+  assert.ok(
+    clicked,
+    `Could not find a clickable "${instruction}" instruction in the Dockerfile viewer`,
+  );
   // Allow React/Preact to re-render
   await this.page.waitForFunction(
-    () => document.querySelector('[data-testid="side-panel"]')?.getAttribute('aria-hidden') === 'false',
+    () =>
+      document.querySelector('[data-testid="side-panel"]')?.getAttribute('aria-hidden') === 'false',
     { timeout: 3000 },
   );
 });
 
 Then('the explanation panel is open', async function () {
-  const ariaHidden = await this.page.$eval(
-    '[data-testid="side-panel"]',
-    (el) => el.getAttribute('aria-hidden'),
+  const ariaHidden = await this.page.$eval('[data-testid="side-panel"]', (el) =>
+    el.getAttribute('aria-hidden'),
   );
-  assert.equal(ariaHidden, 'false', 'Expected the explanation panel to be open (aria-hidden="false")');
+  assert.equal(
+    ariaHidden,
+    'false',
+    'Expected the explanation panel to be open (aria-hidden="false")',
+  );
 });
 
 Then('the explanation panel is closed', async function () {
-  const ariaHidden = await this.page.$eval(
-    '[data-testid="side-panel"]',
-    (el) => el.getAttribute('aria-hidden'),
+  const ariaHidden = await this.page.$eval('[data-testid="side-panel"]', (el) =>
+    el.getAttribute('aria-hidden'),
   );
-  assert.equal(ariaHidden, 'true', 'Expected the explanation panel to be closed (aria-hidden="true")');
+  assert.equal(
+    ariaHidden,
+    'true',
+    'Expected the explanation panel to be closed (aria-hidden="true")',
+  );
 });
 
 Then('the explanation panel shows the title {string}', async function (expectedTitle) {
-  const panelTitle = await this.page.$eval(
-    '[data-testid="side-panel"] h2 code',
-    (el) => el.textContent.trim(),
+  const panelTitle = await this.page.$eval('[data-testid="side-panel"] h2 code', (el) =>
+    el.textContent.trim(),
   );
   assert.equal(
     panelTitle,
@@ -100,7 +119,8 @@ Then('the explanation panel shows the title {string}', async function (expectedT
 When('I close the explanation panel', async function () {
   await this.page.click('button[aria-label="Close explanation panel"]');
   await this.page.waitForFunction(
-    () => document.querySelector('[data-testid="side-panel"]')?.getAttribute('aria-hidden') === 'true',
+    () =>
+      document.querySelector('[data-testid="side-panel"]')?.getAttribute('aria-hidden') === 'true',
     { timeout: 3000 },
   );
 });
@@ -111,9 +131,7 @@ When('I select the {string} example', async function (label) {
   const clicked = await this.page.evaluate((text) => {
     const group = document.querySelector('[role="group"][aria-label="Select Dockerfile example"]');
     if (!group) return false;
-    const btn = [...group.querySelectorAll('button')].find(
-      (b) => b.textContent.trim() === text,
-    );
+    const btn = [...group.querySelectorAll('button')].find((b) => b.textContent.trim() === text);
     if (!btn) return false;
     btn.click();
     return true;
@@ -122,11 +140,11 @@ When('I select the {string} example', async function (label) {
   // Wait until the selected button reflects aria-pressed="true"
   await this.page.waitForFunction(
     (text) => {
-      const group = document.querySelector('[role="group"][aria-label="Select Dockerfile example"]');
-      if (!group) return false;
-      const btn = [...group.querySelectorAll('button')].find(
-        (b) => b.textContent.trim() === text,
+      const group = document.querySelector(
+        '[role="group"][aria-label="Select Dockerfile example"]',
       );
+      if (!group) return false;
+      const btn = [...group.querySelectorAll('button')].find((b) => b.textContent.trim() === text);
       return btn?.getAttribute('aria-pressed') === 'true';
     },
     { timeout: 3000 },
@@ -167,10 +185,17 @@ Then('the Dockerfile viewer content is visible', async function () {
   });
 
   assert.notEqual(metrics.display, 'none', 'Expected Dockerfile viewer display to not be none');
-  assert.notEqual(metrics.visibility, 'hidden', 'Expected Dockerfile viewer visibility to not be hidden');
+  assert.notEqual(
+    metrics.visibility,
+    'hidden',
+    'Expected Dockerfile viewer visibility to not be hidden',
+  );
   assert.ok(metrics.viewerHeight > 0, 'Expected Dockerfile viewer to have visible height');
   assert.ok(metrics.clientHeight > 0, 'Expected Dockerfile viewer to have positive clientHeight');
   assert.ok(metrics.scrollHeight > 0, 'Expected Dockerfile viewer to contain scrollable content');
   assert.ok(metrics.hasFirstLine, 'Expected Dockerfile viewer to render at least one line');
-  assert.ok(metrics.firstLineVisible, 'Expected at least one Dockerfile line to be visible in the viewer');
+  assert.ok(
+    metrics.firstLineVisible,
+    'Expected at least one Dockerfile line to be visible in the viewer',
+  );
 });

@@ -1,13 +1,18 @@
-import { getExplanation } from '../data/explanations';
 import styles from './DockerfileViewer.module.css';
+
+/**
+ * @typedef {import('../data/tokenizer').Token & {
+ *   explanation: import('../data/explanations').Explanation | null
+ * }} ResolvedToken
+ */
 
 /**
  * Renders a tokenized Dockerfile with interactive keyword/flag tokens.
  *
  * @param {{
- *   lines: import('../data/tokenizer').Line[],
+ *   lines: (Omit<import('../data/tokenizer').Line, 'tokens'> & { tokens: ResolvedToken[] })[],
  *   activeTokenId: string|null,
- *   onTokenClick: (token: import('../data/tokenizer').Token) => void
+ *   onTokenClick: (token: ResolvedToken) => void
  * }} props
  */
 export function DockerfileViewer({ lines, activeTokenId, onTokenClick }) {
@@ -44,10 +49,12 @@ export function DockerfileViewer({ lines, activeTokenId, onTokenClick }) {
 
 /**
  * Renders a single token, interactive if it has an explanation.
+ *
+ * @param {{ token: ResolvedToken, isActive: boolean, onTokenClick: (token: ResolvedToken) => void }} props
  */
 function Token({ token, isActive, onTokenClick }) {
-  const explanation = getExplanation(token.explanationKey);
-  const isInteractive = explanation !== null;
+  const explanation = token.explanation;
+  const isInteractive = explanation != null;
 
   const className = [
     styles.token,

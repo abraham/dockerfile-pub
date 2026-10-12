@@ -67,9 +67,7 @@ const EXPLANATIONS = {
       'Use --from=<stage> to copy artifacts from an earlier build stage (multi-stage builds). ' +
       'Use --chown or --chmod to control file ownership.',
     syntax: 'COPY [--from=<stage>] [--chown=<user>:<group>] <src>... <dest>',
-    links: [
-      { label: 'COPY reference', url: 'https://docs.docker.com/reference/dockerfile/#copy' },
-    ],
+    links: [{ label: 'COPY reference', url: 'https://docs.docker.com/reference/dockerfile/#copy' }],
   },
 
   ADD: {
@@ -80,9 +78,7 @@ const EXPLANATIONS = {
       'archives (.tar, .gz, etc.). Prefer COPY when you do not need those features to keep your ' +
       'Dockerfile transparent and predictable.',
     syntax: 'ADD [--chown=<user>:<group>] <src>... <dest>',
-    links: [
-      { label: 'ADD reference', url: 'https://docs.docker.com/reference/dockerfile/#add' },
-    ],
+    links: [{ label: 'ADD reference', url: 'https://docs.docker.com/reference/dockerfile/#add' }],
   },
 
   WORKDIR: {
@@ -109,9 +105,7 @@ const EXPLANATIONS = {
       'For build-time-only variables use ARG instead. Note that ENV variables can be ' +
       'overridden at runtime with docker run -e.',
     syntax: 'ENV <key>=<value> ...',
-    links: [
-      { label: 'ENV reference', url: 'https://docs.docker.com/reference/dockerfile/#env' },
-    ],
+    links: [{ label: 'ENV reference', url: 'https://docs.docker.com/reference/dockerfile/#env' }],
   },
 
   ARG: {
@@ -123,9 +117,7 @@ const EXPLANATIONS = {
       'You can place an ARG before FROM to parameterise the base image tag. ARG values are ' +
       'available from the line where they are declared through the end of the build stage.',
     syntax: 'ARG <name>[=<default value>]',
-    links: [
-      { label: 'ARG reference', url: 'https://docs.docker.com/reference/dockerfile/#arg' },
-    ],
+    links: [{ label: 'ARG reference', url: 'https://docs.docker.com/reference/dockerfile/#arg' }],
   },
 
   EXPOSE: {
@@ -151,9 +143,7 @@ const EXPLANATIONS = {
       'Prefer the exec form (JSON array) over the shell form to avoid shell signal handling ' +
       'issues. When used with ENTRYPOINT, CMD provides default arguments to the entrypoint.',
     syntax: 'CMD ["executable","param1","param2"]\nCMD command param1 param2',
-    links: [
-      { label: 'CMD reference', url: 'https://docs.docker.com/reference/dockerfile/#cmd' },
-    ],
+    links: [{ label: 'CMD reference', url: 'https://docs.docker.com/reference/dockerfile/#cmd' }],
   },
 
   ENTRYPOINT: {
@@ -392,7 +382,7 @@ const EXPLANATIONS = {
     short: 'Sets how often the HEALTHCHECK command is run.',
     details:
       'Accepts a duration string such as 30s, 1m30s. The health check runs this often after ' +
-      "the previous check completes. Default is 30s.",
+      'the previous check completes. Default is 30s.',
     syntax: 'HEALTHCHECK --interval=30s CMD wget -qO- http://localhost/ || exit 1',
     links: [
       {
@@ -462,6 +452,10 @@ export function getExplanation(key) {
   return EXPLANATIONS[key] ?? null;
 }
 
+/**
+ * @param {string} chunk
+ * @returns {Explanation|null}
+ */
 function buildRunChunkExplanation(chunk) {
   if (!chunk) return null;
 
@@ -503,6 +497,7 @@ function buildRunChunkExplanation(chunk) {
   };
 }
 
+/** @param {string} chunk */
 function isRunControlOperator(chunk) {
   return chunk === '&&' || chunk === '||' || chunk === ';' || chunk === '|';
 }

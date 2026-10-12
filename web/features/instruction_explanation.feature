@@ -1,6 +1,5 @@
 @browser
 Feature: Instruction explanation
-
   The core user flow: clicking a highlighted Dockerfile keyword opens a side
   panel that explains what the instruction does.
 
