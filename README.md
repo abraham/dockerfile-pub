@@ -189,6 +189,7 @@ The specs in [docs/specs/](./docs/specs/) are the source of truth:
 | [run-command-explanations.md](./docs/specs/run-command-explanations.md)   | Explanations for shell and exec-form commands                   |
 | [explanation-panel.md](./docs/specs/explanation-panel.md)                 | Panel behaviour, layout, keyboard and accessibility             |
 | [github-workflows.md](./docs/specs/github-workflows.md)                   | CI, deploy and Dependabot                                       |
+| [ai-rewrite.md](./docs/specs/ai-rewrite.md)                               | Proposed: rewrite a Dockerfile with on-device AI                |
 
 ## Contributing
 
