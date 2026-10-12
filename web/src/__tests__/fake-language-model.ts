@@ -1,11 +1,4 @@
 import { vi } from 'vitest';
-import type {
-  Availability,
-  LanguageModelCreateOptions,
-  LanguageModelPromptOptions,
-  LanguageModelSession,
-  LanguageModelStatic,
-} from '../ai/types';
 
 export function deferred() {
   let resolve!: () => void;
@@ -54,12 +47,13 @@ function untilAborted(signal: AbortSignal | undefined): Promise<never> {
 
 /** A scripted stand-in for Chrome's `LanguageModel` (spec §11). */
 export function fakeLanguageModel(options: FakeOptions = {}) {
-  const sessions: { session: LanguageModelSession; destroy: ReturnType<typeof vi.fn> }[] = [];
+  const sessions: { session: LanguageModel; destroy: ReturnType<typeof vi.fn> }[] = [];
   const prompts: string[] = [];
 
-  function makeSession(): LanguageModelSession {
+  function makeSession(): LanguageModel {
     const destroy = vi.fn();
-    const session: LanguageModelSession = {
+    // Only the members the app uses; an async generator stands in for the ReadableStream.
+    const session = {
       contextUsage: 100,
       contextWindow: 1000,
       measureContextUsage: () => Promise.resolve(options.usage ?? 200),
@@ -76,14 +70,14 @@ export function fakeLanguageModel(options: FakeOptions = {}) {
       },
       clone: () => Promise.resolve(makeSession()),
       destroy,
-    };
+    } as unknown as LanguageModel;
     sessions.push({ session, destroy });
     return session;
   }
 
   const create = vi.fn(async ({ monitor }: LanguageModelCreateOptions) => {
     const target = new EventTarget();
-    monitor?.(target);
+    monitor?.(target as CreateMonitor);
     // Chrome reports progress asynchronously, never during the create() call itself.
     await Promise.resolve();
     if (options.download) {
@@ -100,12 +94,12 @@ export function fakeLanguageModel(options: FakeOptions = {}) {
 
   const availability = vi.fn(() => Promise.resolve(options.availability ?? 'available'));
   // Like Chrome's, a class whose constructor throws, so code that calls it fails here too.
-  const model: LanguageModelStatic = class {
+  const model = class {
     static availability = availability;
     static create = create;
     constructor() {
       throw new TypeError('Illegal constructor');
     }
-  };
+  } as unknown as typeof LanguageModel;
   return { model, create, availability, sessions, prompts };
 }

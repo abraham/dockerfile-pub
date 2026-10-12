@@ -6,7 +6,6 @@ import type { PanelEntry } from './components/ExplanationPanel';
 import { CopyButton } from './components/CopyButton';
 import { RewriteButton } from './components/RewriteButton';
 import { findLanguageModel } from './ai/support';
-import type { LanguageModelStatic } from './ai/types';
 import { tokenize, refKey } from './data/tokenizer';
 import type { ExplanationRef } from './data/tokenizer';
 import { EXAMPLES } from './data/examples';
@@ -46,7 +45,7 @@ function loadSavedExample(): string {
 export function App() {
   const [activeExample, setActiveExample] = useState(loadSavedExample);
   const [rewritten, setRewritten] = useState<Rewritten | null>(null);
-  const [languageModel, setLanguageModel] = useState<LanguageModelStatic | null>(null);
+  const [languageModel, setLanguageModel] = useState<typeof LanguageModel | null>(null);
   const [panel, setPanel] = useState<PanelState>(null);
   const panelRef = useRef(panel);
   useLayoutEffect(() => {

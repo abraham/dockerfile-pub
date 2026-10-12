@@ -1,5 +1,4 @@
 import { SESSION_OPTIONS } from './support';
-import type { LanguageModelSession, LanguageModelStatic } from './types';
 import { SYSTEM_PROMPT, buildUserMessage } from '../data/rewrite/prompt';
 import { parseReply } from '../data/rewrite/validate';
 import type { RewriteResult } from '../data/rewrite/validate';
@@ -28,15 +27,15 @@ export interface RewriteRequest {
 }
 
 interface BaseSession {
-  session: Promise<LanguageModelSession>;
+  session: Promise<LanguageModel>;
   /** Download progress goes to whichever requests are waiting, even if an earlier one gave up. */
   listeners: Set<(loaded: number) => void>;
 }
 
-const bases = new WeakMap<LanguageModelStatic, BaseSession>();
+const bases = new WeakMap<typeof LanguageModel, BaseSession>();
 
 /** One base session per page with the system prompt; requests clone it (AIR-15). */
-function baseSession(model: LanguageModelStatic): BaseSession {
+function baseSession(model: typeof LanguageModel): BaseSession {
   const existing = bases.get(model);
   if (existing) return existing;
   const listeners = new Set<(loaded: number) => void>();
@@ -45,7 +44,7 @@ function baseSession(model: LanguageModelStatic): BaseSession {
     initialPrompts: [{ role: 'system', content: SYSTEM_PROMPT }],
     monitor(monitor) {
       monitor.addEventListener('downloadprogress', (event) => {
-        for (const listener of listeners) listener((event as ProgressEvent).loaded);
+        for (const listener of listeners) listener(event.loaded);
       });
     },
   });
@@ -96,13 +95,13 @@ function toRewriteError(error: unknown, fallback: RewriteErrorCode): unknown {
  * AbortError when `signal` aborts.
  */
 export async function rewriteDockerfile(
-  model: LanguageModelStatic,
+  model: typeof LanguageModel,
   { request, dockerfile, signal, onProgress }: RewriteRequest,
 ): Promise<RewriteResult> {
   const base = baseSession(model);
   const onDownload = (loaded: number) => onProgress({ phase: 'download', loaded });
   base.listeners.add(onDownload);
-  let session: LanguageModelSession;
+  let session: LanguageModel;
   try {
     session = await unlessAborted(base.session, signal);
   } catch (error) {
@@ -111,7 +110,7 @@ export async function rewriteDockerfile(
     base.listeners.delete(onDownload);
   }
 
-  let clone: LanguageModelSession;
+  let clone: LanguageModel;
   try {
     clone = await session.clone({ signal });
   } catch (error) {
