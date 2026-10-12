@@ -28,8 +28,9 @@
   background: var(--c-surface-2);
 }
 
+/* Blank lines have no tokens; keep a full line's height. */
 .blank {
-  min-height: 1em;
+  min-height: 1.7em;
 }
 
 .lineNumber {
@@ -87,6 +88,23 @@
 
 .type-text {
   color: var(--c-text-2);
+}
+
+.type-operator {
+  color: var(--c-keyword);
+}
+
+.type-punctuation {
+  color: var(--c-text-2);
+}
+
+.type-escape {
+  color: var(--c-muted);
+}
+
+.type-directive {
+  color: var(--c-comment);
+  font-style: italic;
 }
 
 /* Interactive tokens */

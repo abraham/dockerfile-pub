@@ -3,9 +3,10 @@ import { ExampleToggler } from './components/ExampleToggler';
 import { DockerfileViewer } from './components/DockerfileViewer';
 import { SidePanel } from './components/SidePanel';
 import { CopyButton } from './components/CopyButton';
-import { tokenize } from './data/tokenizer';
+import { tokenize, refKey } from './data/tokenizer';
+import type { ExplanationRef } from './data/tokenizer';
 import { EXAMPLES } from './data/examples';
-import { getExplanation } from './data/explanations';
+import { getExplanation, flatten } from './data/explanations';
 import type { ResolvedToken } from './components/DockerfileViewer';
 import styles from './App.module.css';
 
@@ -30,10 +31,14 @@ export function App() {
     () =>
       tokenize(EXAMPLES[activeExample].content).map((line) => ({
         ...line,
-        tokens: line.tokens.map((token) => ({
-          ...token,
-          explanation: getExplanation(token.explanationKey),
-        })),
+        tokens: line.tokens.map((token) => {
+          const explanation = getExplanation(token.ref);
+          return {
+            ...token,
+            explanation,
+            summary: explanation ? flatten(explanation.short) : '',
+          };
+        }),
       })),
     [activeExample],
   );
@@ -46,6 +51,23 @@ export function App() {
 
   const handlePanelClose = useCallback(() => {
     setIsPanelOpen(false);
+  }, []);
+
+  // "See also" swaps the panel's content, like clicking another token (PNL-5).
+  const handleRelated = useCallback((ref: ExplanationRef) => {
+    const explanation = getExplanation(ref);
+    if (!explanation) return;
+    setActiveToken({
+      id: `related:${refKey(ref)}`,
+      lineIndex: -1,
+      tokenIndex: -1,
+      column: 0,
+      text: explanation.title,
+      type: 'text',
+      ref,
+      explanation,
+      summary: flatten(explanation.short),
+    });
   }, []);
 
   const handleExampleChange = useCallback((key: string) => {
@@ -93,7 +115,7 @@ export function App() {
             <span class={styles.exampleDesc}>{EXAMPLES[activeExample].description}</span>
           </div>
           <span class={styles.hint} aria-live="polite">
-            {isPanelOpen ? '' : 'Click a keyword, flag, or command fragment to explore'}
+            {isPanelOpen ? '' : 'Click any highlighted part of the Dockerfile to explore'}
           </span>
         </div>
 
@@ -113,7 +135,12 @@ export function App() {
             />
           </section>
 
-          <SidePanel token={activeToken} isOpen={isPanelOpen} onClose={handlePanelClose} />
+          <SidePanel
+            token={activeToken}
+            isOpen={isPanelOpen}
+            onClose={handlePanelClose}
+            onNavigate={handleRelated}
+          />
         </div>
       </main>
 

@@ -1,0 +1,116 @@
+line 0  instruction (FROM, start 0, -)
+  "FROM"  keyword  instruction FROM
+  " "  whitespace  —
+  "alpine:3.21"  text  argument FROM image text=alpine:3.21
+line 1  instruction (RUN, start 1, shell)
+  "RUN"  keyword  instruction RUN
+  " "  whitespace  —
+  "<<EOF"  operator  heredoc RUN EOF
+line 2  heredoc (RUN, start 1, shell)
+  "set"  text  shell RUN command cmd=set [0] text=set
+  " "  whitespace  —
+  "-eux"  text  shell RUN option cmd=set [1] text=-eux
+line 3  heredoc (RUN, start 1, shell)
+  "apk"  text  shell RUN command cmd=apk [0] text=apk
+  " "  whitespace  —
+  "add"  text  shell RUN argument cmd=apk [1] text=add
+  " "  whitespace  —
+  "--no-cache"  text  shell RUN option cmd=apk [2] text=--no-cache
+  " "  whitespace  —
+  "curl"  text  shell RUN argument cmd=apk [3] text=curl
+line 4  heredoc (RUN, start 1, shell)
+  "if"  text  shell RUN reserved [-1] text=if
+  " "  whitespace  —
+  "["  text  shell RUN command cmd=[ [0] text=[
+  " "  whitespace  —
+  "-f"  text  shell RUN option cmd=[ [1] text=-f
+  " "  whitespace  —
+  "/etc/os-release"  text  shell RUN argument cmd=[ [2] text=/etc/os-release
+  " "  whitespace  —
+  "]"  text  shell RUN argument cmd=[ [3] text=]
+  ";"  operator  shell RUN operator [-1] text=; ([ → cat)
+  " "  whitespace  —
+  "then"  text  shell RUN reserved [-1] text=then
+  " "  whitespace  —
+  "cat"  text  shell RUN command cmd=cat [0] text=cat
+  " "  whitespace  —
+  "/etc/os-release"  text  shell RUN argument cmd=cat [1] text=/etc/os-release
+  ";"  operator  shell RUN operator [-1] text=; (cat → ∅)
+  " "  whitespace  —
+  "fi"  text  shell RUN reserved [-1] text=fi
+line 5  heredoc (RUN, start 1, shell)
+  "EOF"  operator  heredoc RUN EOF
+line 6  instruction (COPY, start 6, -)
+  "COPY"  keyword  instruction COPY
+  " "  whitespace  —
+  "<<-CONF"  operator  heredoc COPY CONF
+  " "  whitespace  —
+  "/etc/app.conf"  text  argument COPY destination text=/etc/app.conf
+line 7  heredoc (COPY, start 6, -)
+  "\t"  whitespace  —
+  "listen 8080"  text  —
+line 8  heredoc (COPY, start 6, -)
+  "\t"  whitespace  —
+  "CONF"  operator  heredoc COPY CONF
+line 9  instruction (RUN, start 9, shell)
+  "RUN"  keyword  instruction RUN
+  " "  whitespace  —
+  "<<A"  operator  heredoc RUN A
+  " "  whitespace  —
+  "cat"  text  shell RUN command cmd=cat [0] text=cat
+  " "  whitespace  —
+  ">"  operator  shell RUN redirection cmd=cat [-1] text=>
+  " "  whitespace  —
+  "/a"  text  shell RUN redirect-target cmd=cat [-1] text=/a
+  " "  whitespace  —
+  "&&"  operator  shell RUN operator [-1] text=&& (cat → cat)
+  " "  whitespace  —
+  "<<'B'"  operator  heredoc RUN B
+  " "  whitespace  —
+  "cat"  text  shell RUN command cmd=cat [0] text=cat
+  " "  whitespace  —
+  ">"  operator  shell RUN redirection cmd=cat [-1] text=>
+  " "  whitespace  —
+  "/b"  text  shell RUN redirect-target cmd=cat [-1] text=/b
+line 10  heredoc (RUN, start 9, shell)
+  "first"  text  —
+line 11  heredoc (RUN, start 9, shell)
+  "A"  operator  heredoc RUN A
+line 12  heredoc (RUN, start 9, shell)
+  "second $HOME"  text  —
+line 13  heredoc (RUN, start 9, shell)
+  "B"  operator  heredoc RUN B
+line 14  instruction (ONBUILD, start 14, -)
+  "ONBUILD"  keyword  instruction ONBUILD
+  " "  whitespace  —
+  "COPY"  keyword  instruction COPY
+  " "  whitespace  —
+  "."  text  argument COPY source text=.
+  " "  whitespace  —
+  "/app"  text  argument COPY destination text=/app
+line 15  instruction (ONBUILD, start 15, -)
+  "ONBUILD"  keyword  instruction ONBUILD
+  " "  whitespace  —
+  "RUN"  keyword  instruction RUN
+  " "  whitespace  —
+  "make"  text  shell RUN command cmd=make [0] text=make
+  " "  whitespace  —
+  "build"  text  shell RUN argument cmd=make [1] text=build
+line 16  instruction (MAINTAINER, start 16, -)
+  "MAINTAINER"  keyword  instruction MAINTAINER
+  " "  whitespace  —
+  "Jane"  text  argument MAINTAINER name text=Jane Doe <jane@example.com>
+  " "  whitespace  —
+  "Doe"  text  argument MAINTAINER name text=Jane Doe <jane@example.com>
+  " "  whitespace  —
+  "<jane@example.com>"  text  argument MAINTAINER name text=Jane Doe <jane@example.com>
+line 17  instruction (ENV, start 17, -)
+  "ENV"  keyword  instruction ENV
+  " "  whitespace  —
+  "LEGACY"  text  argument ENV key text=LEGACY
+  " "  whitespace  —
+  "value"  text  argument ENV value text=value with spaces
+  " "  whitespace  —
+  "with"  text  argument ENV value text=value with spaces
+  " "  whitespace  —
+  "spaces"  text  argument ENV value text=value with spaces

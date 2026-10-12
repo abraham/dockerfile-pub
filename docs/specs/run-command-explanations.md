@@ -1,12 +1,12 @@
 # Spec: Command explanations
 
-|                   |                                                                                                                                                                                                                                     |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**        | Target design (rewritten 2026-10-12). Builds on the target tokenizer ([tokenizer.md](./tokenizer.md)). The current code still uses `RUN_CHUNK:` keys; §13 lists what changes. The file name is kept so existing links keep working. |
-| **Source**        | To be added: `web/src/data/commands/` (`explain.ts`, `resolve.ts`, `catalog.ts`, `shell-syntax.ts`); dispatched from `getExplanation()` in [explanations.ts](../../web/src/data/explanations.ts)                                    |
-| **Rendered by**   | `Token` in [DockerfileViewer.tsx](../../web/src/components/DockerfileViewer.tsx), [SidePanel.tsx](../../web/src/components/SidePanel.tsx)                                                                                           |
-| **Tests**         | To be added: `web/src/__tests__/commands.test.ts`, plus fixtures shared with the tokenizer                                                                                                                                          |
-| **Related specs** | [tokenizer.md](./tokenizer.md) (refs and command context, §3.3, TOK-33 to TOK-36), [explanation-content-model.md](./explanation-content-model.md) (schema and authoring rules), [explanation-panel.md](./explanation-panel.md)      |
+|                   |                                                                                                                                                                                                                                        |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**        | Implemented (2026-10-13). The design was rewritten on 2026-10-12 and builds on the tokenizer ([tokenizer.md](./tokenizer.md)); §13 records the migration from `RUN_CHUNK:` keys. The file name is kept so existing links keep working. |
+| **Source**        | [web/src/data/commands/](../../web/src/data/commands/explain.ts) (`explain.ts`, `resolve.ts`, `catalog.ts`, `shell-syntax.ts`); dispatched from `getExplanation()` in [explanations.ts](../../web/src/data/explanations.ts)            |
+| **Rendered by**   | `Token` in [DockerfileViewer.tsx](../../web/src/components/DockerfileViewer.tsx), [SidePanel.tsx](../../web/src/components/SidePanel.tsx)                                                                                              |
+| **Tests**         | [web/src/\_\_tests\_\_/commands.test.ts](../../web/src/__tests__/commands.test.ts), plus the fixtures shared with the tokenizer                                                                                                        |
+| **Related specs** | [tokenizer.md](./tokenizer.md) (refs and command context, §3.3, TOK-33 to TOK-36), [explanation-content-model.md](./explanation-content-model.md) (schema and authoring rules), [explanation-panel.md](./explanation-panel.md)         |
 
 ## 1. Purpose and scope
 
@@ -173,6 +173,7 @@ Each subsection gives the explanation's `title` and `short` and what goes into `
 | In the catalog                  | `` `<cmd>`: <summary>. ``                                                             | catalog `details`; tips; framing                                                                                       |
 | A path (`./build.sh`, `/opt/x`) | ``Runs the program or script at `<path>`.``                                           | framing                                                                                                                |
 | Not in the catalog              | ``Runs the `<cmd>` program.``                                                         | "This explainer has no notes for `<cmd>`; its documentation (`<cmd> --help` or `man <cmd>`) has the details." Framing. |
+| `CMD` exec form, not in catalog | ``The program to run, or the first argument for the `ENTRYPOINT`: `<word>`.``         | framing. Without a cross-instruction view (§12.2), `CMD ["dist/server.js"]` may be `ENTRYPOINT` arguments.             |
 | Single-quoted "JSON" (CMDX-29)  | `Looks like exec form, but JSON needs double quotes, so the shell runs this as text.` | how to fix it; link to the exec-form docs                                                                              |
 
 ### 7.2 Subcommand
@@ -228,7 +229,7 @@ Each subsection gives the explanation's `title` and `short` and what goes into `
 | `>` (`1>`)         | ``Writes the output of `<cmd>` to a file, replacing it.``               |
 | `>>`               | ``Appends the output of `<cmd>` to a file.``                            |
 | `<`                | ``Feeds a file to `<cmd>` as its input.``                               |
-| `2>`               | ``Writes the errors of `<cmd>` to a file.``                             |
+| `2>`               | ``Writes the errors of `<cmd>` to a file, replacing it.``               |
 | `2>&1`             | ``Sends the errors of `<cmd>` to the same place as its normal output.`` |
 | `>&2`, `1>&2`      | ``Sends the normal output of `<cmd>` to the error stream.``             |
 | `<<<`              | ``Feeds the following word to `<cmd>` as its input.``                   |
@@ -259,20 +260,21 @@ Other file-descriptor numbers are described generically, as "stream N".
 
 ### 7.12 Heredoc
 
-| Fragment                 | `short`                                                                        |
-| ------------------------ | ------------------------------------------------------------------------------ |
-| Marker in `RUN`          | ``Starts a heredoc: the lines up to `<DELIM>` are run as a script.``           |
-| Marker in `COPY` / `ADD` | ``Starts a heredoc: the lines up to `<DELIM>` become the contents of a file.`` |
-| Terminator               | ``Ends the heredoc whose delimiter is `<DELIM>`.``                             |
+Markers and terminators share one ref (`{ kind: 'heredoc', instruction, delimiter }`), so they share one explanation.
 
-Link: Dockerfile reference `#here-documents`.
+| Instruction    | `short`                                                                        |
+| -------------- | ------------------------------------------------------------------------------ |
+| `RUN`          | ``Heredoc: the lines up to `<DELIM>` are a script, or input for the command.`` |
+| `COPY` / `ADD` | ``Heredoc: the lines up to `<DELIM>` become the contents of a file.``          |
+
+`details` says when a `RUN` heredoc is a script (on its own) and when it is a command's input (after a command, TOK-41). Link: Dockerfile reference `#here-documents`.
 
 ## 8. Content rules
 
 These are in addition to the general authoring rules in [explanation-content-model.md](./explanation-content-model.md) (EXP-2, EXP-4, EXP-5, EXP-16).
 
 - **CMDX-19** `syntax` is set wherever it helps: a minimal example of the construct, such as `RUN <before> && <after>` or `CMD ["executable", "arg"]`.
-- **CMDX-20** **Size budget:** the catalog and syntax tables together stay at or below **4 KB gzipped**. A unit test measures the gzipped serialized catalog. The whole bundle must still fit the 28 KB gzipped JS budget (ARCH-15, D15). The catalog is not lazy-loaded, so `getExplanation` stays synchronous and the panel never needs a loading state (ARCH-14).
+- **CMDX-20** **Size budget:** the catalog stays at or below **4 KB gzipped**, measured by a unit test on the gzipped serialized catalog. The whole bundle must still fit the gzipped JS budget (ARCH-15, D16). The catalog is not lazy-loaded, so `getExplanation` stays synchronous and the panel never needs a loading state (ARCH-14).
 - **CMDX-21** **Length:** `short` must be at most 120 characters (EXP-2) whatever the input. Every interpolated value is cut to 32 characters plus `…`; if `short` is still too long, the least important clause is dropped. `title` is cut to 60 characters plus `…`. A property test checks both limits over long, random inputs.
 - **CMDX-22** **No markup injection** (replaces RUNX-14). Interpolated values are arbitrary source text. Generators build rich text with the builder API (EXP-31): every interpolated value becomes a plain-text or inline-code node and is never parsed as rich-text syntax. Values reach the DOM only as text nodes (EXP-5, PNL-12).
 - **CMDX-23** Backticks in the §7 templates mark **inline code**: the value inside is rendered in code style in the panel (EXP-18), and flattened to plain text in tooltips and accessible names (EXP-29). Templates are written with the builder API, not as strings to be parsed (CMDX-22).
@@ -286,7 +288,7 @@ The panel and token rules in [explanation-panel.md](./explanation-panel.md) and 
 
 ## 10. Worked examples (bundled examples)
 
-These are the `short` texts the bundled examples should produce. They double as golden tests (§11). The catalog wording shown is illustrative; CMDX-8 governs the final wording.
+These are the `short` texts the bundled examples produce, checked exactly by the golden tests (§11).
 
 ```text
 RUN --mount=type=cache,target=/root/.npm \
@@ -318,12 +320,12 @@ HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
     CMD wget -qO- http://localhost:3000/health || exit 1
 ```
 
-| Fragment | Resolution                              | `short`                                                                  |
-| -------- | --------------------------------------- | ------------------------------------------------------------------------ |
-| `wget`   | command, `HEALTHCHECK` framing          | `wget`: download files over HTTP, HTTPS or FTP.                          |
-| `-qO-`   | cluster: `-q`, then `-O` with value `-` | Combined `wget` options: `-q` quiet mode, `-O -` write output to stdout. |
-| `\|\|`   | operator, `wget` → `exit`               | Runs `exit` only if `wget` fails.                                        |
-| `1`      | argument to `exit`                      | Argument to `exit`: the exit status (non-zero means failure).            |
+| Fragment | Resolution                              | `short`                                                                                         |
+| -------- | --------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `wget`   | command, `HEALTHCHECK` framing          | `wget`: download files over HTTP, HTTPS or FTP.                                                 |
+| `-qO-`   | cluster: `-q`, then `-O` with value `-` | Combined `wget` options: `-q` turn off progress output, `-O -` write the download to this file. |
+| `\|\|`   | operator, `wget` → `exit`               | Runs `exit` only if `wget` fails.                                                               |
+| `1`      | argument to `exit`                      | Argument to `exit`: the exit status (`0` means success, anything else failure).                 |
 
 ```text
 CMD ["nginx", "-g", "daemon off;"]
@@ -365,7 +367,9 @@ The `details` for `"nginx"` include the `CMD` exec-form framing. The nginx entry
 - **`ONBUILD` framing:** say that a trigger runs when another image builds `FROM` this one. That needs an `onbuild` marker on the ref.
 - **Catalog growth:** if the catalog outgrows CMDX-20, lazy-load the full catalog after first render while keeping the example commands in the main bundle. That is an architecture change to ARCH-14.
 
-## 13. Migration from the current implementation
+## 13. Migration from the previous implementation
+
+The migration below is complete (2026-10-13); it is kept as a record.
 
 | Current                                                                        | Target                                                                                         |
 | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |

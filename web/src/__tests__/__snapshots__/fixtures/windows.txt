@@ -1,0 +1,52 @@
+line 0  directive
+  "# "  directive  directive escape
+  "escape"  directive  directive escape
+  "="  punctuation  directive escape
+  "`"  text  directive escape
+line 1  instruction (FROM, start 1, -)
+  "FROM"  keyword  instruction FROM
+  " "  whitespace  —
+  "mcr.microsoft.com/windows/servercore:ltsc2022"  text  argument FROM image text=mcr.microsoft.com/windows/servercore:ltsc2022
+line 2  instruction (SHELL, start 2, -)
+  "SHELL"  keyword  instruction SHELL
+  " "  whitespace  —
+  "["  punctuation  json-array SHELL
+  "\"powershell\""  string  exec-form SHELL executable [0] text=powershell
+  ","  punctuation  json-array SHELL
+  " "  whitespace  —
+  "\"-Command\""  string  exec-form SHELL argument [1] text=-Command
+  ","  punctuation  json-array SHELL
+  " "  whitespace  —
+  "\"$ErrorActionPreference = 'Stop';\""  string  exec-form SHELL argument [2] text=$ErrorActionPreference = 'Stop';
+  "]"  punctuation  json-array SHELL
+line 3  instruction (RUN, start 3, shell)
+  "RUN"  keyword  instruction RUN
+  " "  whitespace  —
+  "dir"  text  shell RUN command cmd=dir [0] text=dir
+  " "  whitespace  —
+  "c:\\"  text  shell RUN argument cmd=dir [1] text=c:\
+  " "  whitespace  —
+  "`"  escape  line-continuation `
+line 4  continuation (RUN, start 3, shell)
+  "    "  whitespace  —
+  "&&"  operator  shell RUN operator [-1] text=&& (dir → echo)
+  " "  whitespace  —
+  "echo"  text  shell RUN command cmd=echo [0] text=echo
+  " "  whitespace  —
+  "done"  text  shell RUN argument cmd=echo [1] text=done
+line 5  instruction (COPY, start 5, -)
+  "COPY"  keyword  instruction COPY
+  " "  whitespace  —
+  "app\\"  text  argument COPY source text=app\
+  " "  whitespace  —
+  "C:\\app\\"  text  argument COPY destination text=C:\app\
+line 6  instruction (WORKDIR, start 6, -)
+  "WORKDIR"  keyword  instruction WORKDIR
+  " "  whitespace  —
+  "C:\\app"  text  argument WORKDIR path text=C:\app
+line 7  instruction (ENTRYPOINT, start 7, exec)
+  "ENTRYPOINT"  keyword  instruction ENTRYPOINT
+  " "  whitespace  —
+  "["  punctuation  json-array ENTRYPOINT
+  "\"C:\\\\app\\\\server.exe\""  string  exec-form ENTRYPOINT executable [0] text=C:\app\server.exe
+  "]"  punctuation  json-array ENTRYPOINT

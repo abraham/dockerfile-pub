@@ -72,35 +72,32 @@ Then('I should see the text {string}', async function (this: PuppeteerWorld, exp
 
 // ─── Instruction explanation steps ────────────────────────────────────────────
 
-When(
-  'I click the {string} instruction',
-  async function (this: PuppeteerWorld, instruction: string) {
-    // Interactive instruction keywords are rendered as <button> elements inside
-    // the "Dockerfile source" region.  Match by aria-label prefix so the step
-    // works regardless of the full title text.
-    const clicked = await this.page.evaluate((text) => {
-      const region = document.querySelector('[aria-label="Dockerfile source"]');
-      if (!region) return false;
-      const btn = [...region.querySelectorAll('button')].find(
-        (b) => b.textContent?.trim() === text,
-      );
-      if (!btn) return false;
-      btn.click();
-      return true;
-    }, instruction);
-    assert.ok(
-      clicked,
-      `Could not find a clickable "${instruction}" instruction in the Dockerfile viewer`,
+/** Clicks the first token button in the viewer whose text is exactly `text`. */
+async function clickToken(this: PuppeteerWorld, text: string) {
+  // Interactive tokens are rendered as <button> elements inside the
+  // "Dockerfile source" region. Match by text so the step works regardless of
+  // the explanation wording.
+  const clicked = await this.page.evaluate((tokenText) => {
+    const region = document.querySelector('[aria-label="Dockerfile source"]');
+    if (!region) return false;
+    const btn = [...region.querySelectorAll('button')].find(
+      (b) => b.textContent?.trim() === tokenText,
     );
-    // Allow React/Preact to re-render
-    await this.page.waitForFunction(
-      () =>
-        document.querySelector('[data-testid="side-panel"]')?.getAttribute('aria-hidden') ===
-        'false',
-      { timeout: 3000 },
-    );
-  },
-);
+    if (!btn) return false;
+    btn.click();
+    return true;
+  }, text);
+  assert.ok(clicked, `Could not find a clickable "${text}" token in the Dockerfile viewer`);
+  // Allow Preact to re-render
+  await this.page.waitForFunction(
+    () =>
+      document.querySelector('[data-testid="side-panel"]')?.getAttribute('aria-hidden') === 'false',
+    { timeout: 3000 },
+  );
+}
+
+When('I click the {string} instruction', clickToken);
+When('I click the {string} command fragment', clickToken);
 
 Then('the explanation panel is open', async function (this: PuppeteerWorld) {
   const ariaHidden = await this.page.$eval('[data-testid="side-panel"]', (el) =>

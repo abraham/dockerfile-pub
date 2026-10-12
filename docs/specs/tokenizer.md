@@ -2,8 +2,8 @@
 
 |                   |                                                                                                                                                                                                |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**        | Target design (rewritten 2026-10-11). Describes the intended implementation. The current code still follows the older line-by-line design; §12 lists what changes.                             |
-| **Source**        | [web/src/data/tokenizer.ts](../../web/src/data/tokenizer.ts) (to be split into `web/src/data/tokenizer/`, see §4.6)                                                                            |
+| **Status**        | Implemented (2026-10-13). The design was rewritten on 2026-10-11 and implemented as specified; §12 records the migration from the older line-by-line design.                                   |
+| **Source**        | [web/src/data/tokenizer/](../../web/src/data/tokenizer/index.ts) (modules in §4.6)                                                                                                             |
 | **Tests**         | [web/src/\_\_tests\_\_/tokenizer.test.ts](../../web/src/__tests__/tokenizer.test.ts)                                                                                                           |
 | **Consumers**     | `App` (attaches explanations to tokens), `DockerfileViewer` (renders lines and token types), `getExplanation()` in [explanations.ts](../../web/src/data/explanations.ts) (resolves token refs) |
 | **Related specs** | [run-command-explanations.md](./run-command-explanations.md), [explanation-content-model.md](./explanation-content-model.md), [site-architecture.md](./site-architecture.md)                   |
@@ -214,7 +214,7 @@ flowchart LR
 
 - **TOK-9** Directives are recognized only at the top of the file, as BuildKit does. Each line is checked against `^\s*#\s*([A-Za-z][A-Za-z0-9]*)\s*=\s*(.*?)\s*$`. The directive section ends at the first line that is not a directive: blank, comment, instruction or anything else.
 - **TOK-10** Known directives are `syntax`, `escape` and `check`; names are case-insensitive. A directive with an unknown name, or a repeat of one already seen, is a `comment` line, and it ends the directive section.
-- **TOK-11** `escape` sets the escape character for the whole file. Only `\` (the default) and `` ` `` are valid; any other value leaves `\` in force. The escape character controls line continuations (§4.3) and escaping inside Dockerfile words (§5.4). It does not change shell quoting inside shell form (§5.6).
+- **TOK-11** `escape` sets the escape character for the whole file. Only `\` (the default) and `` ` `` are valid; any other value leaves `\` in force. The escape character controls line continuations (§4.3) and escaping inside Dockerfile words (§5.4). It does not change shell quoting inside shell form (§5.6), with one exception: under `` # escape=` `` the shell is a Windows shell, where `\` is the path separator, so the shell lexer treats `\` as an ordinary character (`RUN dir c:\` keeps `c:\` as one word).
 - **TOK-12** Tokens: optional leading `whitespace`; `#` with the space around the name (`directive`); the name (`directive`); `=` (`punctuation`); the value (`text`); optional trailing `whitespace`. Every non-whitespace token has the ref `{ kind: 'directive', directive: <lower-cased name> }`.
 
 ### 4.3 Logical instructions
@@ -242,6 +242,7 @@ The keyword and flags are lexed the same way for every instruction (§5.1–§5.
 | Module                      | Responsibility                                                |
 | --------------------------- | ------------------------------------------------------------- |
 | `tokenizer/index.ts`        | `tokenize`, `refKey` and the public types; runs phases 1–5.   |
+| `tokenizer/types.ts`        | Types, constants and character helpers shared by the lexers.  |
 | `tokenizer/lines.ts`        | Phases 1–3: physical lines, directives, logical instructions. |
 | `tokenizer/instructions.ts` | Keyword, flags and the per-instruction grammar table (§5.3).  |
 | `tokenizer/words.ts`        | Word lexer for non-shell arguments (§5.4).                    |
@@ -326,7 +327,7 @@ The shell lexer covers the POSIX shell subset that appears in Dockerfiles. It wo
   - All other words are `argument`s.
   - A redirection operator's target word (`/dev/null` in `>/dev/null`) is a `redirect-target`. It is not an argument and is left out of `words`.
 - **TOK-36** Command context on `shell` refs. The tokenizer records only syntax; deciding what a word means for a particular tool (subcommand, option value) belongs to the explanation layer ([run-command-explanations.md](./run-command-explanations.md)).
-  - `command` is the text of the current simple command's `command` word. It is `null` for operators, substitution delimiters and reserved words, and for assignments that come before the command.
+  - `command` is the current simple command's `command` word, with quotes removed (as in `words`). It is `null` for operators, substitution delimiters and reserved words, and for assignments that come before the command.
   - `words` lists the simple command's words from the `command` word on, with quotes removed and variables left as written. Assignments, redirections and redirect targets are not included. `wordIndex` is this word's index in `words`, or `-1` for tokens that aren't one of them.
   - `before` and `after` are set only for control operators: the `command` words of the simple commands on each side (`addgroup` and `adduser` for the `&&` in `addgroup -S g && adduser x`), or `null` if there isn't one.
   - Redirection operators and their targets carry the `command` and `words` of the command they belong to.
@@ -337,7 +338,7 @@ The shell lexer covers the POSIX shell subset that appears in Dockerfiles. It wo
 
 - **TOK-39** In `RUN`, `COPY` and `ADD`, a marker `<<WORD`, `<<-WORD`, `<<"WORD"` or `<<'WORD'` is an `operator` token with ref `{ kind: 'heredoc', instruction, delimiter: WORD }`. An instruction may open several heredocs; their bodies follow in order.
 - **TOK-40** A body is the run of physical lines up to a line that equals the delimiter exactly; with `<<-`, leading tabs are ignored when comparing. Body lines are `heredoc` lines. The terminator line is a `heredoc` line whose delimiter is an `operator` token with the heredoc ref. If no terminator appears, the body runs to the end of the file.
-- **TOK-41** `RUN` bodies are lexed as shell script (§5.6), with a line break acting as a command separator. `COPY`/`ADD` bodies are file contents: each body line is one `text` token (plus leading `whitespace`), with no ref.
+- **TOK-41** A `RUN` body is lexed as shell script (§5.6), with a line break acting as a command separator, when the heredoc is the `RUN`'s only argument (`RUN <<EOF`), because BuildKit then runs the body as a script. When the heredoc follows a command (`RUN python3 <<EOF`, `RUN <<A cat > /a`), the body is that command's input, and is lexed like file contents. `COPY`/`ADD` bodies are file contents: each body line is one `text` token (plus leading `whitespace`), with no ref.
 
 ## 6. Explanation refs: decisions
 
@@ -371,7 +372,7 @@ Each invariant must hold for **every** input string, and each is enforced by a p
 - **INV-4 Positions:** within a line, `tokenIndex` runs `0..n-1` in order; `column` equals the total length of the earlier tokens on the line; `` id === `${lineIndex}-${tokenIndex}` ``; ids are unique across the result.
 - **INV-5 Line-bounded:** no token's `text` contains `\n` or a CRLF pair.
 - **INV-6 Instruction context:** `instruction` and `continuation` lines always have an `instruction`. `heredoc` lines always have one too. `instruction.startLine <= lineIndex`, and the line at `startLine` has type `instruction`. `directive` and `unknown` lines never have one.
-- **INV-7 One keyword per instruction:** every `instruction` line has exactly one token with ref kind `instruction` for its own keyword, and it is the first non-whitespace token. `ONBUILD` lines have a second one, for the nested keyword.
+- **INV-7 One keyword per instruction:** every `instruction` line has exactly one token with ref kind `instruction` for its own keyword, and it is the first non-whitespace token. An `ONBUILD` line that nests a valid instruction on the same line has a second one, for the nested keyword.
 - **INV-8 Deterministic and stable:** the same input gives deep-equal output, so ids are stable across re-renders (`App` relies on this for `activeTokenId`). Ids are positional; references that must survive edits to the examples use `refKey` (TOK-2).
 - **INV-9 Linear time:** tokenizing `n` copies of the Complex example takes time proportional to `n`. A benchmark test checks this with a generous bound, along with pathological inputs: long runs of quotes, `$`, `\` and `<<`.
 
@@ -467,13 +468,15 @@ line 0  instruction (CMD, exec)
 line 1  instruction (CMD, shell)   ← single quotes are not JSON (TOK-32)
   CMD          keyword      instruction CMD
   ␠            whitespace   —
-  [            text         shell CMD command cmd=['node',
-  'node'       string       shell CMD command cmd=['node',
-  ,            text         shell CMD command cmd=['node',
+  [            text         shell CMD command cmd=[node,
+  'node'       string       shell CMD command cmd=[node,
+  ,            text         shell CMD command cmd=[node,
   ␠            whitespace   —
-  'server.js'  string       shell CMD argument cmd=['node',
-  ]            text         shell CMD argument cmd=['node',
+  'server.js'  string       shell CMD argument cmd=[node,
+  ]            text         shell CMD argument cmd=[node,
 ```
+
+`command` holds the command word with quotes removed (`[node,`), like `words`; `text` keeps the source (`['node',`).
 
 ### 8.5 Unterminated quote (previously truncated the line)
 
@@ -555,15 +558,17 @@ These fit the data model without breaking it:
 
 ## 11. Testing strategy
 
-| Layer           | What                                                                                                                                                                                                                                                  |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Property tests  | INV-1 to INV-8 checked over every `EXAMPLES` entry, every fixture, and random strings drawn from Dockerfile-ish characters (`\`, `` ` ``, quotes, `$`, `{`, `<<`, `#`, CR/LF, tabs). A small seeded generator is enough; no new dependency is needed. |
-| Golden fixtures | `src/__tests__/fixtures/*.Dockerfile`, each with a snapshot in the notation of §8. The fixtures cover every example in §8 plus real-world files: multi-stage Node, Python, Go, Windows (backtick escape), heredocs and `ONBUILD`.                     |
-| Unit tests      | One focused test per TOK rule that has its own logic (directive section end, flag position, JSON fallback, shell role transitions, heredoc terminators, `<<-` tabs).                                                                                  |
-| Performance     | INV-9 benchmark with pathological inputs.                                                                                                                                                                                                             |
-| Regression      | Each bug fixed gets a fixture or unit test before the fix (for example, the old unterminated-quote truncation, §8.5).                                                                                                                                 |
+| Layer           | What                                                                                                                                                                                                                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Property tests  | INV-1 to INV-8 checked over every `EXAMPLES` entry, every fixture, and random strings drawn from Dockerfile-ish characters (`\`, `` ` ``, quotes, `$`, `{`, `<<`, `#`, CR/LF, tabs). A small seeded generator is enough; no new dependency is needed.                          |
+| Golden fixtures | `src/__tests__/fixtures/*.Dockerfile`, each with a file snapshot in `src/__tests__/__snapshots__/fixtures/` in the notation of §8. The fixtures cover every example in §8 plus real-world files: multi-stage Python and Go, Windows (backtick escape), heredocs and `ONBUILD`. |
+| Unit tests      | One focused test per TOK rule that has its own logic (directive section end, flag position, JSON fallback, shell role transitions, heredoc terminators, `<<-` tabs).                                                                                                           |
+| Performance     | INV-9 benchmark with pathological inputs.                                                                                                                                                                                                                                      |
+| Regression      | Each bug fixed gets a fixture or unit test before the fix (for example, the old unterminated-quote truncation, §8.5).                                                                                                                                                          |
 
-## 12. Migration from the current implementation
+## 12. Migration from the previous implementation
+
+The migration below is complete (2026-10-13); it is kept as a record.
 
 ### 12.1 Breaking changes for consumers
 

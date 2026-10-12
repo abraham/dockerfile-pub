@@ -1,19 +1,19 @@
 # dockerfile-pub
 
 An interactive single-page developer tool that explains how Dockerfiles work.
-Click any instruction or flag to see a concise explanation, syntax reference, and links to official Docker documentation.
+Click any part of a Dockerfile (instructions, flags, arguments, variables, shell commands and their options) to see a concise explanation, syntax reference, and links to official documentation.
 
 **[Live demo →](https://dockerfile.pub/)**
 
 ## Features
 
 - **Three Dockerfile examples** — Simple, Average, and Complex, switchable at any time
-- **Interactive tokens** — click any highlighted keyword (`FROM`, `RUN`, `COPY`, …) or flag (`--from`, `--mount`, …) to open an explanation panel
-- **Rich explanations** — short summary, extended details, syntax reference, and links to the official Docker docs
+- **Interactive tokens** — click any highlighted part: keywords (`FROM`, `RUN`, …), flags (`--from`, `--mount`, …), image names, paths, variables, and shell commands, options and operators, explained in context (`-S` in `adduser -S` is explained as an `adduser` option)
+- **Rich explanations** — short summary, details with inline code, syntax reference, "See also" links between related concepts, and links to the official docs
 - **Accessible** — semantic HTML, ARIA attributes, keyboard navigation, focus management, and ESC to close
 - **Responsive** — adapts from desktop side-panel layout to a mobile bottom-sheet
 - **Light + dark modes** — follows the OS preference via `prefers-color-scheme`
-- **Tiny bundle** — ~15 KB gzipped, built with [Preact](https://preactjs.com/) and [Vite](https://vite.dev/)
+- **Small bundle** — under 40 KB gzipped, built with [Preact](https://preactjs.com/) and [Vite](https://vite.dev/)
 
 ## Getting started
 
@@ -49,7 +49,7 @@ npm test
 
 The test suite covers:
 
-- **Unit tests** — tokenizer / parser and token → explanation mapping (`tokenizer.test.ts`)
+- **Unit tests** — tokenizer invariants, reference examples and golden fixtures (`tokenizer.test.ts`); explanation content, rich text and generators (`content.test.ts`); command explanations and the command catalog (`commands.test.ts`)
 - **UI tests** — example toggling, panel open/close, Escape key, documentation links, copy button behaviour (`App.test.tsx`, `SidePanel.test.tsx`, `CopyButton.test.tsx`)
 
 ### Feature tests (end-to-end)
@@ -84,15 +84,15 @@ The Cucumber/Puppeteer feature tests navigate a real browser to a running instan
 
 The feature suite currently covers:
 
-| Feature file                      | Scenarios                                                                      |
-| --------------------------------- | ------------------------------------------------------------------------------ |
-| `browser.feature`                 | Headless browser smoke test                                                    |
-| `site.feature`                    | Home page loads with the expected title; no Content Security Policy violations |
-| `homepage.feature`                | Homepage title, heading, and intro text                                        |
-| `instruction_explanation.feature` | Clicking an instruction opens the panel; closing; switching instructions       |
-| `example_switcher.feature`        | Default example shown; switching examples; switching closes the panel          |
-| `reduced_motion.feature`          | No transitions with `prefers-reduced-motion: reduce`; transitions otherwise    |
-| `accessibility.feature`           | axe-core WCAG 2.2 AA checks in the dark and light colour schemes               |
+| Feature file                      | Scenarios                                                                                        |
+| --------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `browser.feature`                 | Headless browser smoke test                                                                      |
+| `site.feature`                    | Home page loads with the expected title; no Content Security Policy violations                   |
+| `homepage.feature`                | Homepage title, heading, and intro text                                                          |
+| `instruction_explanation.feature` | Clicking an instruction opens the panel; closing; switching; continuation-line command fragments |
+| `example_switcher.feature`        | Default example shown; switching examples; switching closes the panel                            |
+| `reduced_motion.feature`          | No transitions with `prefers-reduced-motion: reduce`; transitions otherwise                      |
+| `accessibility.feature`           | axe-core WCAG 2.2 AA checks in the dark and light colour schemes                                 |
 
 ### Lint, format and type-check
 
@@ -111,7 +111,7 @@ npm run build
 npm run size   # fails if the bundle exceeds its budget
 ```
 
-Outputs a static bundle to `web/dist/`. The production build is ~41 KB JS and ~12 KB CSS before gzip (~15 KB and ~3 KB gzipped). `npm run size` fails if gzipped JS exceeds 28 KB or gzipped CSS exceeds 5 KB.
+Outputs a static bundle to `web/dist/`. The production build is ~117 KB JS and ~13 KB CSS before gzip (~38 KB and ~3 KB gzipped). `npm run size` fails if gzipped JS exceeds 40 KB or gzipped CSS exceeds 5 KB.
 
 ### Preview production build
 
@@ -154,13 +154,18 @@ web/
 │   │   └── SidePanel.module.css
 │   ├── data/
 │   │   ├── examples.ts        Three Dockerfile texts
-│   │   ├── tokenizer.ts       Parses Dockerfile into Line/Token objects
-│   │   └── explanations.ts    Keyword/flag → explanation content map
+│   │   ├── tokenizer/         Dockerfile → lines of tokens with explanation refs
+│   │   ├── content/           Explanation schema, rich text, static entries, generators
+│   │   ├── commands/          Command catalog, resolver and shell syntax explanations
+│   │   └── explanations.ts    getExplanation(ref): the lookup entry point
 │   ├── styles/
 │   │   └── global.css         Design tokens + CSS reset
 │   └── __tests__/
 │       ├── setup.ts
+│       ├── fixtures/          Dockerfiles for tokenizer golden tests
 │       ├── tokenizer.test.ts
+│       ├── content.test.ts
+│       ├── commands.test.ts
 │       ├── App.test.tsx
 │       ├── SidePanel.test.tsx
 │       └── CopyButton.test.tsx
@@ -168,18 +173,18 @@ web/
 
 ## Architecture overview
 
-A static Preact + TypeScript single-page app with no backend. `App` tokenizes the selected example (`src/data/tokenizer.ts`), attaches an explanation to each token (`src/data/explanations.ts`), and owns all state. The selected example is persisted to `localStorage` under the key `df-example`.
+A static Preact + TypeScript single-page app with no backend. `App` tokenizes the selected example (`src/data/tokenizer/`), attaches an explanation to each token with `getExplanation(token.ref)` (`src/data/explanations.ts`), and owns all state. The selected example is persisted to `localStorage` under the key `df-example`.
 
 The specs in [docs/specs/](./docs/specs/) are the source of truth:
 
-| Spec                                                                      | Covers                                                        |
-| ------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| [site-architecture.md](./docs/specs/site-architecture.md)                 | Layers, state, styling, build, testing, hosting, decision log |
-| [tokenizer.md](./docs/specs/tokenizer.md)                                 | `Line` / `Token` model and tokenization rules                 |
-| [explanation-content-model.md](./docs/specs/explanation-content-model.md) | Explanation schema, keys and authoring rules                  |
-| [run-command-explanations.md](./docs/specs/run-command-explanations.md)   | Generated explanations for `RUN` command fragments            |
-| [explanation-panel.md](./docs/specs/explanation-panel.md)                 | Panel behaviour, layout, keyboard and accessibility           |
-| [github-workflows.md](./docs/specs/github-workflows.md)                   | CI, deploy and Dependabot                                     |
+| Spec                                                                      | Covers                                                          |
+| ------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| [site-architecture.md](./docs/specs/site-architecture.md)                 | Layers, state, styling, build, testing, hosting, decision log   |
+| [tokenizer.md](./docs/specs/tokenizer.md)                                 | `Line` / `Token` model, explanation refs and tokenization rules |
+| [explanation-content-model.md](./docs/specs/explanation-content-model.md) | Explanation schema, rich text, lookup and authoring rules       |
+| [run-command-explanations.md](./docs/specs/run-command-explanations.md)   | Explanations for shell and exec-form commands                   |
+| [explanation-panel.md](./docs/specs/explanation-panel.md)                 | Panel behaviour, layout, keyboard and accessibility             |
+| [github-workflows.md](./docs/specs/github-workflows.md)                   | CI, deploy and Dependabot                                       |
 
 ## Contributing
 

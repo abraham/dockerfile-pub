@@ -1,12 +1,12 @@
 # Spec: Explanation content model
 
-|                   |                                                                                                                                                                                                                                                                                        |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**        | Target design (rewritten 2026-10-12). Builds on the target tokenizer ([tokenizer.md](./tokenizer.md)) and command explanations ([run-command-explanations.md](./run-command-explanations.md)). The current code still uses string keys and a `details` string; §12 lists what changes. |
-| **Source**        | To be added: `web/src/data/content/` (`schema.ts`, `rich-text.ts`, `registry.ts`, `instructions.ts`, `flags.ts`, `keywords.ts`, `directives.ts`, `arguments.ts`, `variables.ts`); entry point `getExplanation()` in [explanations.ts](../../web/src/data/explanations.ts)              |
-| **Rendered by**   | [SidePanel.tsx](../../web/src/components/SidePanel.tsx) (panel), `Token` in [DockerfileViewer.tsx](../../web/src/components/DockerfileViewer.tsx) (tooltip and accessible name)                                                                                                        |
-| **Tests**         | To be added: `web/src/__tests__/content.test.ts`; plus [SidePanel.test.tsx](../../web/src/__tests__/SidePanel.test.tsx) for rendering                                                                                                                                                  |
-| **Related specs** | [tokenizer.md](./tokenizer.md) (refs, §3.3), [run-command-explanations.md](./run-command-explanations.md) (command fragments), [explanation-panel.md](./explanation-panel.md) (how explanations are shown)                                                                             |
+|                   |                                                                                                                                                                                                                                                                                                    |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**        | Implemented (2026-10-13). The design was rewritten on 2026-10-12 and builds on the tokenizer ([tokenizer.md](./tokenizer.md)) and command explanations ([run-command-explanations.md](./run-command-explanations.md)); §12 records the migration from string keys and a `details` string.          |
+| **Source**        | [web/src/data/content/](../../web/src/data/content/schema.ts) (`schema.ts`, `rich-text.ts`, `registry.ts`, `instructions.ts`, `flags.ts`, `keywords.ts`, `directives.ts`, `arguments.ts`, `variables.ts`); entry point `getExplanation()` in [explanations.ts](../../web/src/data/explanations.ts) |
+| **Rendered by**   | [SidePanel.tsx](../../web/src/components/SidePanel.tsx) (panel), `Token` in [DockerfileViewer.tsx](../../web/src/components/DockerfileViewer.tsx) (tooltip and accessible name)                                                                                                                    |
+| **Tests**         | [web/src/\_\_tests\_\_/content.test.ts](../../web/src/__tests__/content.test.ts); plus [SidePanel.test.tsx](../../web/src/__tests__/SidePanel.test.tsx) for rendering                                                                                                                              |
+| **Related specs** | [tokenizer.md](./tokenizer.md) (refs, §3.3), [run-command-explanations.md](./run-command-explanations.md) (command fragments), [explanation-panel.md](./explanation-panel.md) (how explanations are shown)                                                                                         |
 
 ## 1. Purpose and scope
 
@@ -214,17 +214,19 @@ These rules apply to hand-written content. Generated templates follow them too, 
 
 ## 8. Size budget
 
-- **EXP-41** All content modules in this spec (static entries, argument templates, the known-variable table and the rich-text runtime) stay at or below **8 KB gzipped**. Together with the command catalog (CMDX-20, 4 KB), content is at most 12 KB gzipped. A unit test measures each budget.
-  - Content is bundled, not lazy-loaded, so lookup stays synchronous (EXP-15, ARCH-14).
-  - The main JS budget (ARCH-15) is 28 KB gzipped, raised from 20 KB to make room for the target tokenizer and content (D15).
-  - If content later outgrows these budgets, the fallback is to lazy-load the content chunk after first render. Interactivity doesn't depend on content (EXP-12), so only the panel would ever wait.
+- **EXP-41** The serialized static entries (every registered explanation, as JSON) stay at or below **8 KB gzipped**, and the serialized command catalog at or below 4 KB (CMDX-20). Unit tests measure both. The code that generates content (argument templates, the known-variable table, the rich-text runtime) is covered by the total JS budget.
+  - Content is bundled, not lazy-loaded, so lookup stays synchronous (EXP-15, ARCH-14). Every token's tooltip and accessible name use `short`, so content is needed at first render.
+  - The main JS budget (ARCH-15) is 40 KB gzipped (D16), raised from 28 KB once the tokenizer, content and catalog were implemented and measured.
+  - If content later outgrows these budgets, the fallback is to lazy-load the panel's `details` after first render while keeping `short` in the main bundle.
 
-## 9. Inventory against the target
+## 9. Inventory
 
-| Kind          | Today                                                        | Target                          | To add                                                                                                                                |
+All targets below were reached on 2026-10-13.
+
+| Kind          | Before                                                       | Now                             | Added                                                                                                                                 |
 | ------------- | ------------------------------------------------------------ | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `instruction` | 18 entries                                                   | 18                              | `category`, `related`; `deprecated` on `MAINTAINER`; convert `details` to markup; US spelling (EXP-26)                                |
-| `flag`        | 9 global entries                                             | 22 instruction-scoped (EXP-35)  | `--network`, `--security`, `--link`, `--parents`, `--exclude`, `--keep-git-dir`, `--checksum`, `--start-interval`; `appliesTo` on all |
+| `flag`        | 9 global entries                                             | 21 instruction-scoped (EXP-35)  | `--network`, `--security`, `--link`, `--parents`, `--exclude`, `--keep-git-dir`, `--checksum`, `--start-interval`; `appliesTo` on all |
 | `subkeyword`  | none (`HEALTHCHECK … CMD` resolved to the `CMD` instruction) | 3                               | `FROM AS`, `HEALTHCHECK CMD`, `HEALTHCHECK NONE`                                                                                      |
 | `directive`   | none (shown as comments)                                     | 3                               | `syntax`, `escape`, `check`                                                                                                           |
 | `argument`    | none                                                         | templates for every row of §6.1 | all                                                                                                                                   |
@@ -259,7 +261,9 @@ These rules apply to hand-written content. Generated templates follow them too, 
 | Budgets           | EXP-41 and CMDX-20 (gzip measured in a Node-environment test).                                                                                                                                              |
 | Rendering         | `SidePanel.test.tsx`: `<code>` for inline code, lists only for list blocks, `category`, `deprecated` notice and "See also" rendering, and omitted sections (EXP-7).                                         |
 
-## 12. Migration from the current implementation
+## 12. Migration from the previous implementation
+
+The migration below is complete (2026-10-13); it is kept as a record.
 
 ### 12.1 Breaking changes
 

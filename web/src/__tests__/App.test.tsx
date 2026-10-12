@@ -96,6 +96,25 @@ describe('App', () => {
       expect(screen.getByRole('heading', { name: /^addgroup$/i, level: 2 })).toBeInTheDocument();
     });
 
+    it('explains shell options on continuation lines in context', async () => {
+      const user = userEvent.setup();
+      render(<App />);
+      await user.click(screen.getByRole('button', { name: /complex/i }));
+      await user.click(screen.getByRole('button', { name: /^--omit=dev:/i }));
+      expect(screen.getByRole('heading', { name: '--omit=dev', level: 2 })).toBeInTheDocument();
+      expect(screen.getByText('npm option')).toBeInTheDocument();
+    });
+
+    it('swaps content from "See also" while staying open', async () => {
+      const user = userEvent.setup();
+      render(<App />);
+      await user.click(screen.getAllByRole('button', { name: /^FROM:/i })[0]);
+      await user.click(screen.getByRole('button', { name: 'COPY --from' }));
+      expect(screen.getByRole('heading', { name: '--from', level: 2 })).toBeInTheDocument();
+      expect(screen.getByText('COPY flag')).toBeInTheDocument();
+      expect(screen.getByTestId('side-panel')).toHaveAttribute('aria-hidden', 'false');
+    });
+
     it('closes when the close button is clicked', async () => {
       const user = userEvent.setup();
       render(<App />);

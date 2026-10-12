@@ -37,7 +37,7 @@ flowchart LR
 | `web/src/main.tsx`                                      | Bootstrap: imports `global.css` and renders `<App />` into `#root`.                                                             |
 | `web/src/App.tsx`                                       | The only stateful component: holds state and lays out the page.                                                                 |
 | `web/src/components/`                                   | UI components, one `.module.css` per component.                                                                                 |
-| `web/src/data/`                                         | Pure TypeScript: tokenizer, explanations, examples. Has no Preact imports.                                                      |
+| `web/src/data/`                                         | Pure TypeScript: `tokenizer/`, explanation `content/`, `commands/`, the `explanations.ts` entry point and `examples.ts`.        |
 | `web/src/styles/global.css`                             | Design tokens, reset and base element styles.                                                                                   |
 | `web/src/__tests__/`                                    | Vitest unit and component tests. `setup.ts` holds shared test setup.                                                            |
 | `web/features/`                                         | Cucumber + Puppeteer end-to-end tests.                                                                                          |
@@ -70,14 +70,14 @@ flowchart TD
 - **ARCH-1 Data layer is pure.** Modules in `src/data/` must not import Preact, the DOM or browser APIs. They must be deterministic, so they can run in Node directly (`node --input-type=module`) and be unit-tested without jsdom.
   - Enforced by ESLint for `src/data/**`: `no-restricted-imports` blocks `preact`, `preact/*`, components, `App` and CSS; `no-restricted-globals` blocks `window`, `document`, `navigator`, `localStorage`, `sessionStorage` and `fetch`.
 - **ARCH-2 Components receive data through props.** Components get everything they render from props and raise events through callbacks (`onChange`, `onTokenClick`, `onClose`). They hold only local UI state, such as `CopyButton`'s "Copied!" flag or `ExampleToggler`'s indicator refs. Components do not import from `src/data/`.
-  - `App` resolves each token's explanation once per example switch and attaches it as `token.explanation` (`Explanation | null`). `DockerfileViewer` treats a token as interactive when `token.explanation` is non-null, and `SidePanel` receives the same object. The tokenizer itself stays independent of the explanation map (tokenizer spec §2).
+  - `App` resolves each token's explanation once per example switch and attaches it as `token.explanation` (`Explanation | null`), together with `token.summary`, the flattened `short` text (EXP-29). `DockerfileViewer` treats a token as interactive when `token.explanation` is non-null and uses `summary` for its tooltip and accessible name; `SidePanel` receives the same object. Components may import types from `src/data/`, but no runtime code. The tokenizer itself stays independent of the explanation content (tokenizer spec §2).
 - **ARCH-3 There is one owner of application state.** `App` holds all cross-component state:
 
-  | State           | Type                                                  | Persisted                                                                                                    |
-  | --------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-  | `activeExample` | example key                                           | `localStorage['df-example']` (invalid or missing values fall back to `simple`; storage errors are swallowed) |
-  | `activeToken`   | `ResolvedToken` (`Token & { explanation }`) or `null` | no                                                                                                           |
-  | `isPanelOpen`   | `boolean`                                             | no                                                                                                           |
+  | State           | Type                                                           | Persisted                                                                                                    |
+  | --------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+  | `activeExample` | example key                                                    | `localStorage['df-example']` (invalid or missing values fall back to `simple`; storage errors are swallowed) |
+  | `activeToken`   | `ResolvedToken` (`Token & { explanation, summary }`) or `null` | no                                                                                                           |
+  | `isPanelOpen`   | `boolean`                                                      | no                                                                                                           |
 
   There is no store, context or router. Introduce one only if state has to be shared across more than one level of components, or deep links are added (see §10.2).
 
@@ -129,15 +129,15 @@ flowchart TD
 
 - **ARCH-15 Budget.** The README claims "~15 KB gzipped". CONTRIBUTING.md says "No new dependencies unless strictly necessary. The bundle must stay small."
 
-  | Asset | Raw     | Gzip    | Measured                               |
-  | ----- | ------- | ------- | -------------------------------------- |
-  | JS    | 41.7 KB | 15.3 KB | 2026-10-11, `vite build`               |
-  | CSS   | 12.2 KB | 3.2 KB  | 2026-10-11                             |
-  | HTML  | 0.8 KB  | 0.5 KB  | 2026-10-11 (includes the CSP meta tag) |
+  | Asset | Raw      | Gzip    | Measured                               |
+  | ----- | -------- | ------- | -------------------------------------- |
+  | JS    | 117.2 KB | 38.4 KB | 2026-10-13, `vite build`               |
+  | CSS   | 13.3 KB  | 3.4 KB  | 2026-10-13                             |
+  | HTML  | 0.8 KB   | 0.5 KB  | 2026-10-11 (includes the CSP meta tag) |
 
-  > ✅ **Enforced in CI.** [scripts/check-size.ts](../../web/scripts/check-size.ts) (`npm run size`, run after Build in `ci.yml`) fails if the gzipped JS total exceeds **28 KB** or the gzipped CSS total exceeds **5 KB**. It also fails if `dist/assets` contains no JS. The README cites the same numbers.
+  > ✅ **Enforced in CI.** [scripts/check-size.ts](../../web/scripts/check-size.ts) (`npm run size`, run after Build in `ci.yml`) fails if the gzipped JS total exceeds **40 KB** or the gzipped CSS total exceeds **5 KB**. It also fails if `dist/assets` contains no JS. The README cites the same numbers. (`vite build` reports kB of 1,000 bytes; `check-size.ts` reports KiB, so the same bundle shows as 37.1 KB there.)
   >
-  > The JS budget was raised from 20 KB to 28 KB on 2026-10-12 (D15). That makes room for the target tokenizer, the explanation content (EXP-41, at most 8 KB) and the command catalog (CMDX-20, at most 4 KB) while still catching a framework-sized dependency.
+  > The JS budget was raised from 20 KB to 28 KB on 2026-10-12 (D15), then to 40 KB on 2026-10-13 (D16), after the tokenizer (about 7 KB gzipped), the explanation content and the command catalog were implemented and measured. 40 KB still leaves headroom while catching a framework-sized dependency.
 
 - **ARCH-16 Runtime work.** Tokenizing and `getExplanation` both run once per token per example switch (memoised, ARCH-4). Both are O(n) in the example size. No virtualisation is needed.
 
@@ -202,7 +202,7 @@ The detailed rules (WF-*) live in [github-workflows.md](./github-workflows.md); 
   - Vite's default `base: '/'` produces root-absolute URLs (`/assets/index-*.js`, `/favicon.svg`). These are correct only because the site is served at the domain root.
   - The custom domain is set in the repository's Pages settings, and **this spec is the source of truth for it**. The site deploys with GitHub Actions, and GitHub ignores a `CNAME` file in that case, so a `CNAME` file would only mislead. If the Pages setting were removed, the site would be served from `/dockerfile-pub/` and every asset would 404.
   - The README links (Live demo, production `BASE_URL` example) use `https://dockerfile.pub/`.
-- **ARCH-24 Static hosting limits.** GitHub Pages does not allow custom response headers (CSP, HSTS policy, cache headers). With no backend and no third-party scripts, the main risk would be an XSS hole in rendering. That is covered by the text-only rendering rules (EXP-5, RUNX-14, PNL-12).
+- **ARCH-24 Static hosting limits.** GitHub Pages does not allow custom response headers (CSP, HSTS policy, cache headers). With no backend and no third-party scripts, the main risk would be an XSS hole in rendering. That is covered by the text-only rendering rules (EXP-5, CMDX-22, PNL-12).
   - As defence in depth, the production build has a `<meta http-equiv="Content-Security-Policy">`: `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'`.
   - It is injected by a Vite plugin in [vite.config.ts](../../web/vite.config.ts) (`transformIndexHtml`, `apply: 'build'`). It is deliberately absent in dev, because the dev server adds inline scripts for hot reload.
   - The production output has no inline scripts or styles. `ExampleToggler` sets styles through the CSSOM (`element.style.*`), which `style-src 'self'` allows.
@@ -218,13 +218,13 @@ The site has no analytics, no cookies and no external requests at runtime. The o
 
 ### 10.2 Deep linking
 
-The selected example and token live only in memory and `localStorage`, so a specific explanation cannot be shared by URL. **Open question:** add a hash-based state such as `#complex/14-3` or `#complex/--mount`. Hash-based state works on static hosting with no 404 workaround. Token ids are tied to line positions (tokenizer INV-6), so a key-based anchor (`--mount`) would survive changes to the examples better than an id-based one.
+The selected example and token live only in memory and `localStorage`, so a specific explanation cannot be shared by URL. **Open question:** add a hash-based state such as `#complex/14-3` or `#complex/--mount`. Hash-based state works on static hosting with no 404 workaround. Token ids are tied to line positions (tokenizer INV-4, INV-8), so a key-based anchor built from `refKey` (TOK-2, such as `flag:RUN:--mount`) would survive changes to the examples better than an id-based one.
 
 ### 10.3 User-supplied Dockerfiles
 
 Today all input is bundled and trusted. Letting users paste their own Dockerfile would change several assumptions:
 
-- the tokenizer becomes a robustness boundary (tokenizer.md §6.1 and §6.6 become must-fix),
+- the tokenizer is already built as a robustness boundary (tokenizer.md P1, P2, INV-1, INV-2 and INV-9), but larger inputs need a re-check,
 - text-only rendering becomes security-critical,
 - performance needs to be re-checked for large files,
 - persisting the content would raise privacy questions.
@@ -279,7 +279,7 @@ Treat this as a new spec, not an extension of an existing one.
 | D4  | CSS Modules + custom-property tokens; no CSS framework                                                              | Scoped styles, theming through tokens, zero runtime cost                                                                                               | Accepted                                            |
 | D5  | Dark by default, light through `prefers-color-scheme`; no toggle                                                    | Developer-tool convention; no state to persist                                                                                                         | Accepted                                            |
 | D6  | Content bundled as JS modules                                                                                       | Small size; type-adjacent; no fetch                                                                                                                    | Accepted; revisit per content spec §8.4             |
-| D7  | Tokenize on the client, per line, display-only                                                                      | Keeps raw examples human-editable                                                                                                                      | Accepted; see tokenizer spec                        |
+| D7  | Tokenize on the client, per logical instruction, display-only                                                       | Keeps raw examples human-editable                                                                                                                      | Accepted; see tokenizer spec                        |
 | D8  | All state in `App`                                                                                                  | Shallow tree; three pieces of state                                                                                                                    | Accepted; see ARCH-3                                |
 | D9  | Three test layers (Vitest unit, Vitest + jsdom UI, Cucumber + Puppeteer E2E)                                        | Readable acceptance scenarios; E2E can target any environment                                                                                          | Accepted                                            |
 | D10 | GitHub Pages + custom domain at the root                                                                            | Free, integrated with Actions                                                                                                                          | Accepted; see ARCH-23 (configured outside the repo) |
@@ -287,7 +287,8 @@ Treat this as a new spec, not an extension of an existing one.
 | D12 | Explanations are resolved in `App` and attached to tokens; components never import `src/data`                       | One lookup per token per example switch; clear layer boundary                                                                                          | Accepted; see ARCH-2                                |
 | D13 | Automated accessibility checks run in the E2E layer (axe-core), not in jsdom                                        | jsdom cannot compute real colours, layout or target sizes                                                                                              | Accepted 2026-10-11; see ARCH-29                    |
 | D14 | No `CNAME` file; the Pages setting plus this spec are the record of the custom domain                               | GitHub ignores `CNAME` for Actions deployments                                                                                                         | Accepted 2026-10-11; see ARCH-23                    |
-| D15 | JS budget raised from 20 KB to 28 KB gzipped; content stays bundled, not lazy-loaded                                | Keeps explanation lookup synchronous with no loading states, while fitting the target tokenizer, content and command catalog                           | Accepted 2026-10-12; see ARCH-15, EXP-41, CMDX-20   |
+| D15 | JS budget raised from 20 KB to 28 KB gzipped; content stays bundled, not lazy-loaded                                | Keeps explanation lookup synchronous with no loading states, while fitting the target tokenizer, content and command catalog                           | Superseded by D16                                   |
+| D16 | JS budget raised from 28 KB to 40 KB gzipped after measuring the implemented tokenizer, content and catalog         | Every token's tooltip and accessible name need `short` at first render, so content can't be deferred without changing that; 40 KB keeps headroom       | Accepted 2026-10-13; see ARCH-15, EXP-41, CMDX-20   |
 
 ## 12. Verification checklist
 

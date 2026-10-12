@@ -1,51 +1,71 @@
 import { useEffect, useRef } from 'preact/hooks';
 import type { ResolvedToken } from './DockerfileViewer';
+import type { Block, Inline } from '../data/explanations';
+import type { ExplanationRef } from '../data/tokenizer';
 import styles from './SidePanel.module.css';
 
-function isListDetailBlock(block: string): boolean {
-  const lines = block
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  if (lines.length < 2) return false;
-
-  return lines.every((line) => /^([-*]\s+.+)|(.+\s[—–-]\s.+)$/.test(line));
+/** Inline content as text nodes and `<code>` elements only (EXP-5, PNL-12). */
+function InlineText({ content }: { content: readonly Inline[] }) {
+  return (
+    <>
+      {content.map((part, i) =>
+        typeof part === 'string' ? (
+          part
+        ) : (
+          <code key={i} class={styles.code}>
+            {part.code}
+          </code>
+        ),
+      )}
+    </>
+  );
 }
 
-function renderDetailBlock(block: string, key: number) {
-  if (!isListDetailBlock(block)) {
+function renderBlock(block: Block, key: number) {
+  if (block.type === 'paragraph') {
     return (
       <p key={key} class={styles.para}>
-        {block}
+        <InlineText content={block.content} />
       </p>
     );
   }
-
-  const items = block
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-
   return (
     <ul key={key} class={styles.detailList}>
-      {items.map((item) => (
-        <li key={item} class={styles.detailListItem}>
-          {item}
+      {block.items.map((item, i) => (
+        <li key={i} class={styles.detailListItem}>
+          <InlineText content={item} />
         </li>
       ))}
     </ul>
   );
 }
 
+/** A "See also" label that says which instruction a flag or keyword belongs to. */
+function relatedLabel(ref: ExplanationRef): string {
+  switch (ref.kind) {
+    case 'instruction':
+      return ref.instruction;
+    case 'flag':
+      return `${ref.instruction} ${ref.flag}`;
+    case 'subkeyword':
+      return `${ref.instruction} ${ref.word}`;
+    case 'directive':
+      return `# ${ref.directive}`;
+    default:
+      return 'text' in ref ? ref.text : ref.kind;
+  }
+}
+
 interface SidePanelProps {
   token: ResolvedToken | null;
   isOpen: boolean;
   onClose: () => void;
+  /** Shows another explanation in place, from "See also" (PNL-5). */
+  onNavigate: (ref: ExplanationRef) => void;
 }
 
 /** Side panel that displays an explanation for the selected token. */
-export function SidePanel({ token, isOpen, onClose }: SidePanelProps) {
+export function SidePanel({ token, isOpen, onClose, onNavigate }: SidePanelProps) {
   const panelRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -118,6 +138,7 @@ export function SidePanel({ token, isOpen, onClose }: SidePanelProps) {
       {isOpen && explanation && (
         <>
           <div class={styles.header}>
+            <p class={styles.category}>{explanation.category}</p>
             <div class={styles.titleRow}>
               <h2 class={styles.title}>
                 <code class={styles.titleCode}>{explanation.title}</code>
@@ -146,14 +167,20 @@ export function SidePanel({ token, isOpen, onClose }: SidePanelProps) {
                 </svg>
               </button>
             </div>
-            <p class={styles.short}>{explanation.short}</p>
+            <p class={styles.short}>
+              <InlineText content={explanation.short} />
+            </p>
+            {explanation.deprecated && (
+              <p class={styles.deprecated} role="note">
+                Deprecated since {explanation.deprecated.since}. Use{' '}
+                <InlineText content={explanation.deprecated.instead} /> instead.
+              </p>
+            )}
           </div>
 
           <div class={styles.body}>
-            {explanation.details && (
-              <div class={styles.section}>
-                {explanation.details.split('\n\n').map((block, i) => renderDetailBlock(block, i))}
-              </div>
+            {explanation.details.length > 0 && (
+              <div class={styles.section}>{explanation.details.map(renderBlock)}</div>
             )}
 
             {explanation.syntax && (
@@ -162,6 +189,28 @@ export function SidePanel({ token, isOpen, onClose }: SidePanelProps) {
                 <pre class={styles.syntaxBlock} tabIndex={0} role="region" aria-label="Syntax">
                   <code>{explanation.syntax}</code>
                 </pre>
+              </div>
+            )}
+
+            {explanation.related && explanation.related.length > 0 && (
+              <div class={styles.section}>
+                <h3 class={styles.sectionTitle}>See also</h3>
+                <ul class={styles.relatedList}>
+                  {explanation.related.map((ref, i) => (
+                    <li key={i}>
+                      <button
+                        type="button"
+                        class={styles.relatedButton}
+                        onClick={() => {
+                          onNavigate(ref);
+                          closeButtonRef.current?.focus();
+                        }}
+                      >
+                        {relatedLabel(ref)}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
 
