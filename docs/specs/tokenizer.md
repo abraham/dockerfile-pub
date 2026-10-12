@@ -1,11 +1,11 @@
 # Spec: Dockerfile tokenizer
 
-| | |
-|---|---|
-| **Status** | Draft — documents current behaviour; deviations flagged inline |
-| **Source** | [web/src/data/tokenizer.js](../../web/src/data/tokenizer.js) |
-| **Tests** | [web/src/\_\_tests\_\_/tokenizer.test.js](../../web/src/__tests__/tokenizer.test.js) |
-| **Consumers** | `App` (via `useMemo`), `DockerfileViewer`, `getExplanation()` in [explanations.js](../../web/src/data/explanations.js) |
+|               |                                                                                                                     |
+| ------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **Status**    | Draft — documents current behaviour; deviations flagged inline                                                      |
+| **Source**    | [web/src/data/tokenizer.js](../../web/src/data/tokenizer.js)                                                        |
+| **Tests**     | [web/src/\_\_tests\_\_/tokenizer.test.js](../../web/src/__tests__/tokenizer.test.js)                                |
+| **Consumers** | `App` (via `useMemo`; attaches `getExplanation()` results to each token before passing lines to `DockerfileViewer`) |
 
 ## 1. Purpose
 
@@ -23,12 +23,12 @@ The tokenizer is a **line-oriented lexer for display**, not a Dockerfile parser.
 import { tokenize, TOKEN_TYPE, LINE_TYPE, INSTRUCTIONS } from './data/tokenizer';
 ```
 
-| Export | Kind | Description |
-|---|---|---|
-| `tokenize(text: string): Line[]` | function | Pure and deterministic. Same input → deep-equal output. No I/O, no dependency on the explanation map. |
-| `TOKEN_TYPE` | enum | `keyword`, `flag`, `string`, `variable`, `comment`, `text` |
-| `LINE_TYPE` | enum | `blank`, `comment`, `instruction`, `continuation` |
-| `INSTRUCTIONS` | `Set<string>` | The 18 Dockerfile instruction keywords: `ADD ARG CMD COPY ENTRYPOINT ENV EXPOSE FROM HEALTHCHECK LABEL MAINTAINER ONBUILD RUN SHELL STOPSIGNAL USER VOLUME WORKDIR` |
+| Export                           | Kind          | Description                                                                                                                                                         |
+| -------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tokenize(text: string): Line[]` | function      | Pure and deterministic. Same input → deep-equal output. No I/O, no dependency on the explanation map.                                                               |
+| `TOKEN_TYPE`                     | enum          | `keyword`, `flag`, `string`, `variable`, `comment`, `text`                                                                                                          |
+| `LINE_TYPE`                      | enum          | `blank`, `comment`, `instruction`, `continuation`                                                                                                                   |
+| `INSTRUCTIONS`                   | `Set<string>` | The 18 Dockerfile instruction keywords: `ADD ARG CMD COPY ENTRYPOINT ENV EXPOSE FROM HEALTHCHECK LABEL MAINTAINER ONBUILD RUN SHELL STOPSIGNAL USER VOLUME WORKDIR` |
 
 `TOKEN_TYPE` values are also CSS class suffixes (`styles['type-<value>']` in `DockerfileViewer`); renaming one is a breaking change for styling.
 
@@ -36,23 +36,23 @@ import { tokenize, TOKEN_TYPE, LINE_TYPE, INSTRUCTIONS } from './data/tokenizer'
 
 ### Line
 
-| Field | Type | Rule |
-|---|---|---|
-| `lineIndex` | `number` | Zero-based position in the input |
-| `raw` | `string` | The original line text, unmodified |
-| `type` | `LINE_TYPE` | See §4.2 |
-| `keyword` | `string \| null` | The instruction keyword for `instruction` lines; otherwise `null` |
-| `tokens` | `Token[]` | Ordered, non-empty |
+| Field       | Type             | Rule                                                              |
+| ----------- | ---------------- | ----------------------------------------------------------------- |
+| `lineIndex` | `number`         | Zero-based position in the input                                  |
+| `raw`       | `string`         | The original line text, unmodified                                |
+| `type`      | `LINE_TYPE`      | See §4.2                                                          |
+| `keyword`   | `string \| null` | The instruction keyword for `instruction` lines; otherwise `null` |
+| `tokens`    | `Token[]`        | Ordered, non-empty                                                |
 
 ### Token
 
-| Field | Type | Rule |
-|---|---|---|
-| `id` | `string` | `` `${lineIndex}-${tokenIndex}` `` |
-| `text` | `string` | Non-empty slice of `raw` |
-| `type` | `TOKEN_TYPE` | See §4.4 |
-| `lineIndex` | `number` | Equals the owning line's `lineIndex` |
-| `tokenIndex` | `number` | Zero-based, contiguous within the line |
+| Field            | Type             | Rule                                        |
+| ---------------- | ---------------- | ------------------------------------------- |
+| `id`             | `string`         | `` `${lineIndex}-${tokenIndex}` ``          |
+| `text`           | `string`         | Non-empty slice of `raw`                    |
+| `type`           | `TOKEN_TYPE`     | See §4.4                                    |
+| `lineIndex`      | `number`         | Equals the owning line's `lineIndex`        |
+| `tokenIndex`     | `number`         | Zero-based, contiguous within the line      |
 | `explanationKey` | `string \| null` | Lookup key for `getExplanation()`; see §4.5 |
 
 A non-null `explanationKey` does **not** guarantee an explanation exists. Consumers must call `getExplanation(key)` and treat `null` as non-interactive.
@@ -63,18 +63,18 @@ A non-null `explanationKey` does **not** guarantee an explanation exists. Consum
 
 - **TOK-1** Input is split on `\n` only. `N` newline characters always yield `N + 1` lines (so `''` yields one blank line, and a trailing newline yields a trailing blank line).
 - **TOK-2** `\r` is not stripped. In CRLF input it stays at the end of each line as a whitespace `text` token.
-- **TOK-3** Lines are tokenized independently. No state carries from one line to the next (see §6, *continuation context*).
+- **TOK-3** Lines are tokenized independently. No state carries from one line to the next (see §6, _continuation context_).
 
 ### 4.2 Line classification
 
 Rules are evaluated in order against `trimmed = raw.trimStart()`:
 
-| # | Condition | `type` | `keyword` | Tokens |
-|---|---|---|---|---|
-| **TOK-4** | `trimmed === ''` | `blank` | `null` | One `text` token whose text is `raw`, or `' '` if `raw` is empty (so the line keeps its rendered height) |
-| **TOK-5** | `trimmed` starts with `#` | `comment` | `null` | One `comment` token containing the whole `raw` (indentation included) |
-| **TOK-6** | `trimmed` matches `/^[A-Z]+/` and that match is in `INSTRUCTIONS` | `instruction` | the match | See §4.3 |
-| **TOK-7** | anything else | `continuation` | `null` | `raw` tokenized per §4.4 with no instruction context |
+| #         | Condition                                                         | `type`         | `keyword` | Tokens                                                                                                   |
+| --------- | ----------------------------------------------------------------- | -------------- | --------- | -------------------------------------------------------------------------------------------------------- |
+| **TOK-4** | `trimmed === ''`                                                  | `blank`        | `null`    | One `text` token whose text is `raw`, or `' '` if `raw` is empty (so the line keeps its rendered height) |
+| **TOK-5** | `trimmed` starts with `#`                                         | `comment`      | `null`    | One `comment` token containing the whole `raw` (indentation included)                                    |
+| **TOK-6** | `trimmed` matches `/^[A-Z]+/` and that match is in `INSTRUCTIONS` | `instruction`  | the match | See §4.3                                                                                                 |
+| **TOK-7** | anything else                                                     | `continuation` | `null`    | `raw` tokenized per §4.4 with no instruction context                                                     |
 
 Notes:
 
@@ -94,12 +94,12 @@ Notes:
 
 At each position the first matching rule wins:
 
-| Priority | Rule | Pattern | `type` | `explanationKey` |
-|---|---|---|---|---|
-| 1 | **TOK-12** Long flag | `--[a-zA-Z][a-zA-Z0-9-]*(=\S*)?` | `flag` | Flag name with the value stripped, e.g. `--mount=type=cache` → `--mount` |
-| 2 | **TOK-13** Variable | `${…}` (non-empty, no nested `}`) or `$NAME` (`[A-Za-z_][A-Za-z0-9_]*`) | `variable` | `null` |
-| 3 | **TOK-14** Quoted string | `"…"` or `'…'`; no escape handling, must close on the same line | `string` | `null` |
-| 4 | **TOK-15** Chunk | A run of whitespace, **or** a run of characters other than whitespace/`$`/`"`/`'`, **or** a lone `$` | `text` | See §4.5 |
+| Priority | Rule                     | Pattern                                                                                              | `type`     | `explanationKey`                                                         |
+| -------- | ------------------------ | ---------------------------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------ |
+| 1        | **TOK-12** Long flag     | `--[a-zA-Z][a-zA-Z0-9-]*(=\S*)?`                                                                     | `flag`     | Flag name with the value stripped, e.g. `--mount=type=cache` → `--mount` |
+| 2        | **TOK-13** Variable      | `${…}` (non-empty, no nested `}`) or `$NAME` (`[A-Za-z_][A-Za-z0-9_]*`)                              | `variable` | `null`                                                                   |
+| 3        | **TOK-14** Quoted string | `"…"` or `'…'`; no escape handling, must close on the same line                                      | `string`   | `null`                                                                   |
+| 4        | **TOK-15** Chunk         | A run of whitespace, **or** a run of characters other than whitespace/`$`/`"`/`'`, **or** a lone `$` | `text`     | See §4.5                                                                 |
 
 Consequences that are part of the contract:
 
@@ -112,12 +112,12 @@ Consequences that are part of the contract:
 
 ### 4.5 Explanation keys
 
-| Token | Key |
-|---|---|
-| `keyword` | The keyword, e.g. `FROM` |
-| `flag` | The flag name, e.g. `--from` |
-| `text` chunk, non-whitespace, on a line whose `keyword === 'RUN'` | `RUN_CHUNK:<text>` (**TOK-22**) |
-| Everything else (`variable`, `string`, `comment`, whitespace, chunks outside `RUN`, all tokens on `continuation`/`blank` lines) | `null` |
+| Token                                                                                                                           | Key                             |
+| ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `keyword`                                                                                                                       | The keyword, e.g. `FROM`        |
+| `flag`                                                                                                                          | The flag name, e.g. `--from`    |
+| `text` chunk, non-whitespace, on a line whose `keyword === 'RUN'`                                                               | `RUN_CHUNK:<text>` (**TOK-22**) |
+| Everything else (`variable`, `string`, `comment`, whitespace, chunks outside `RUN`, all tokens on `continuation`/`blank` lines) | `null`                          |
 
 `RUN_CHUNK:` keys are resolved dynamically by `getExplanation()`; they need no entry in the static explanation map.
 
@@ -137,17 +137,22 @@ These must hold for every input. Each one should be enforced by a test (property
 
 Output abbreviated as `text:type[:key]`; whitespace tokens are shown as `␠`.
 
-| Input | `type` / `keyword` | Tokens |
-|---|---|---|
-| `FROM node:${NODE_VERSION}-alpine AS base` | instruction / FROM | `FROM:keyword:FROM` `␠` `node::text` `${NODE_VERSION}:variable` `-alpine:text` `␠` `AS:text` `␠` `base:text` |
-| `COPY --from=builder /app/dist .` | instruction / COPY | `COPY:keyword:COPY` `␠` `--from=builder:flag:--from` `␠` `/app/dist:text` `␠` `.:text` |
-| `RUN addgroup -S g && adduser x` | instruction / RUN | `RUN:keyword:RUN` `␠` `addgroup:text:RUN_CHUNK:addgroup` `␠` `-S:text:RUN_CHUNK:-S` `␠` `g:text:RUN_CHUNK:g` `␠` `&&:text:RUN_CHUNK:&&` … |
-| `RUN --mount=type=cache,target=/root/.npm \` | instruction / RUN | … `--mount=type=cache,target=/root/.npm:flag:--mount` `␠` `\:text:RUN_CHUNK:\` |
-| `    npm ci --omit=dev` | continuation / null | `␠` `npm:text` `␠` `ci:text` `␠` `--omit=dev:flag:--omit` |
-| `    CMD wget -qO- http://x \|\| exit 1` | instruction / CMD | `␠` `CMD:keyword:CMD` … (see §6.2) |
-| `CMD ["node", "server.js"]` | instruction / CMD | `CMD:keyword:CMD` `␠` `[` `"node":string` `,` `␠` `"server.js":string` `]` |
-| `# syntax=docker/dockerfile:1` | comment / null | one `comment` token |
-| `` (empty) | blank / null | `' ':text` |
+<!-- Leading spaces in the Input column are significant (indented lines). -->
+<!-- markdownlint-disable MD038 -->
+
+| Input                                        | `type` / `keyword`  | Tokens                                                                                                                                    |
+| -------------------------------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `FROM node:${NODE_VERSION}-alpine AS base`   | instruction / FROM  | `FROM:keyword:FROM` `␠` `node::text` `${NODE_VERSION}:variable` `-alpine:text` `␠` `AS:text` `␠` `base:text`                              |
+| `COPY --from=builder /app/dist .`            | instruction / COPY  | `COPY:keyword:COPY` `␠` `--from=builder:flag:--from` `␠` `/app/dist:text` `␠` `.:text`                                                    |
+| `RUN addgroup -S g && adduser x`             | instruction / RUN   | `RUN:keyword:RUN` `␠` `addgroup:text:RUN_CHUNK:addgroup` `␠` `-S:text:RUN_CHUNK:-S` `␠` `g:text:RUN_CHUNK:g` `␠` `&&:text:RUN_CHUNK:&&` … |
+| `RUN --mount=type=cache,target=/root/.npm \` | instruction / RUN   | … `--mount=type=cache,target=/root/.npm:flag:--mount` `␠` `\:text:RUN_CHUNK:\`                                                            |
+| `    npm ci --omit=dev`                      | continuation / null | `␠` `npm:text` `␠` `ci:text` `␠` `--omit=dev:flag:--omit`                                                                                 |
+| `    CMD wget -qO- http://x \|\| exit 1`     | instruction / CMD   | `␠` `CMD:keyword:CMD` … (see §6.2)                                                                                                        |
+| `CMD ["node", "server.js"]`                  | instruction / CMD   | `CMD:keyword:CMD` `␠` `[` `"node":string` `,` `␠` `"server.js":string` `]`                                                                |
+| `# syntax=docker/dockerfile:1`               | comment / null      | one `comment` token                                                                                                                       |
+| (empty line)                                 | blank / null        | `' ':text`                                                                                                                                |
+
+<!-- markdownlint-enable MD038 -->
 
 ## 6. Known deviations and open questions
 
@@ -157,9 +162,9 @@ Each item needs a decision. Once decided, update the relevant TOK rule and add a
 
 When the scanner reaches a `"` or `'` that has no closing quote on the same line, no rule matches and tokenization stops. The rest of the line is never rendered.
 
-| Input | Rendered |
-|---|---|
-| `RUN echo it's here` | `RUN echo it` |
+| Input                    | Rendered            |
+| ------------------------ | ------------------- |
+| `RUN echo it's here`     | `RUN echo it`       |
 | `COPY --chown="a b" . .` | `COPY --chown="a b` |
 
 **Required**: INV-1. **Proposed fix**: emit an unmatched quote character as a single `text` chunk (add `["']` as a last-resort alternative in TOK-15). Separately, decide whether the scanner should ever be allowed to stop early at all.
@@ -209,18 +214,18 @@ TOK-20 classifies `--omit=dev` as a Docker `flag` with key `--omit`. That key ha
 
 ## 8. Test coverage
 
-| Rule / invariant | Covered by an existing test? |
-|---|---|
-| TOK-1 line count, empty input, blank lines | ✅ |
-| TOK-5 comments, including a parser directive | ✅ |
-| TOK-6 every keyword in `INSTRUCTIONS` | ✅ |
-| TOK-9 keyword token and key | ✅ |
-| TOK-12 flags in `COPY`/`RUN`/`HEALTHCHECK` | ✅ |
-| TOK-13 `${VAR}` and `$VAR` | ✅ |
-| TOK-14 double-quoted strings | ✅ (single quotes ❌) |
-| TOK-20 flags on continuation lines | ✅ |
-| TOK-22 `RUN_CHUNK:` keys | ✅ |
-| INV-2, INV-3 (line part of the id) | ✅ partial |
-| TOK-2, TOK-4 whitespace-only, TOK-8, TOK-11, TOK-16–19, TOK-21 | ❌ |
-| INV-1, INV-3 (full), INV-4, INV-5, INV-6 | ❌ (add as properties checked over every `EXAMPLES` entry) |
-| §6.1 unterminated quote | ❌ (add as a failing test before the fix) |
+| Rule / invariant                                               | Covered by an existing test?                               |
+| -------------------------------------------------------------- | ---------------------------------------------------------- |
+| TOK-1 line count, empty input, blank lines                     | ✅                                                         |
+| TOK-5 comments, including a parser directive                   | ✅                                                         |
+| TOK-6 every keyword in `INSTRUCTIONS`                          | ✅                                                         |
+| TOK-9 keyword token and key                                    | ✅                                                         |
+| TOK-12 flags in `COPY`/`RUN`/`HEALTHCHECK`                     | ✅                                                         |
+| TOK-13 `${VAR}` and `$VAR`                                     | ✅                                                         |
+| TOK-14 double-quoted strings                                   | ✅ (single quotes ❌)                                      |
+| TOK-20 flags on continuation lines                             | ✅                                                         |
+| TOK-22 `RUN_CHUNK:` keys                                       | ✅                                                         |
+| INV-2, INV-3 (line part of the id)                             | ✅ partial                                                 |
+| TOK-2, TOK-4 whitespace-only, TOK-8, TOK-11, TOK-16–19, TOK-21 | ❌                                                         |
+| INV-1, INV-3 (full), INV-4, INV-5, INV-6                       | ❌ (add as properties checked over every `EXAMPLES` entry) |
+| §6.1 unterminated quote                                        | ❌ (add as a failing test before the fix)                  |

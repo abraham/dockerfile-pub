@@ -6,9 +6,9 @@ import styles from './ExampleToggler.module.css';
  * @param {{ examples: {key:string,label:string}[], value: string, onChange: (key:string)=>void }} props
  */
 export function ExampleToggler({ examples, value, onChange }) {
-  const containerRef = useRef(null);
-  const indicatorRef = useRef(null);
-  const buttonRefs = useRef({});
+  const containerRef = useRef(/** @type {HTMLDivElement | null} */ (null));
+  const indicatorRef = useRef(/** @type {HTMLSpanElement | null} */ (null));
+  const buttonRefs = useRef(/** @type {Record<string, HTMLButtonElement | null>} */ ({}));
   const isFirstRenderRef = useRef(true);
 
   useLayoutEffect(() => {
@@ -32,13 +32,20 @@ export function ExampleToggler({ examples, value, onChange }) {
   }, [value]);
 
   return (
-    <div class={styles.toggler} ref={containerRef} role="group" aria-label="Select Dockerfile example">
+    <div
+      class={styles.toggler}
+      ref={containerRef}
+      role="group"
+      aria-label="Select Dockerfile example"
+    >
       <span class={styles.indicator} ref={indicatorRef} aria-hidden="true" />
       {examples.map(({ key, label }) => (
         <button
           key={key}
           type="button"
-          ref={(el) => { buttonRefs.current[key] = el; }}
+          ref={(el) => {
+            buttonRefs.current[key] = el;
+          }}
           class={`${styles.button} ${value === key ? styles.active : ''}`}
           aria-pressed={value === key}
           onClick={() => onChange(key)}

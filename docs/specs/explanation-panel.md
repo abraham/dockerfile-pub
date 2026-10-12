@@ -1,11 +1,11 @@
 # Spec: Explanation panel
 
-| | |
-|---|---|
-| **Status** | Draft. Documents current behaviour. Deviations and open questions are flagged inline. |
-| **Source** | [SidePanel.jsx](../../web/src/components/SidePanel.jsx), [SidePanel.module.css](../../web/src/components/SidePanel.module.css); state and layout in [App.jsx](../../web/src/App.jsx) / [App.module.css](../../web/src/App.module.css) |
-| **Tests** | [SidePanel.test.jsx](../../web/src/__tests__/SidePanel.test.jsx), [App.test.jsx](../../web/src/__tests__/App.test.jsx) › "side panel", [instruction_explanation.feature](../../web/features/instruction_explanation.feature) |
-| **Related** | [explanation-content-model.md](./explanation-content-model.md) (what the panel renders), [run-command-explanations.md](./run-command-explanations.md) |
+|             |                                                                                                                                                                                                                                       |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**  | Draft. Documents current behaviour. Deviations and open questions are flagged inline.                                                                                                                                                 |
+| **Source**  | [SidePanel.jsx](../../web/src/components/SidePanel.jsx), [SidePanel.module.css](../../web/src/components/SidePanel.module.css); state and layout in [App.jsx](../../web/src/App.jsx) / [App.module.css](../../web/src/App.module.css) |
+| **Tests**   | [SidePanel.test.jsx](../../web/src/__tests__/SidePanel.test.jsx), [App.test.jsx](../../web/src/__tests__/App.test.jsx) › "side panel", [instruction_explanation.feature](../../web/features/instruction_explanation.feature)          |
+| **Related** | [explanation-content-model.md](./explanation-content-model.md) (what the panel renders), [run-command-explanations.md](./run-command-explanations.md)                                                                                 |
 
 ## 1. Purpose
 
@@ -34,13 +34,13 @@ stateDiagram-v2
   Open --> Closed: switch example
 ```
 
-| # | Trigger | `isOpen` | `activeToken` |
-|---|---|---|---|
-| **PNL-4** | Click a token whose `getExplanation(key)` is non-null | `true` | that token plus its explanation |
-| **PNL-5** | Click a different token while open | stays `true` | replaced; the panel stays open and its content swaps in place |
-| **PNL-6** | Click the active token again | stays `true` | unchanged (clicking again does **not** close the panel) |
-| **PNL-7** | Close button or Escape | `false` | **unchanged** (see §8.3) |
-| **PNL-8** | Switch example | `false` | `null` |
+| #         | Trigger                                             | `isOpen`     | `activeToken`                                                 |
+| --------- | --------------------------------------------------- | ------------ | ------------------------------------------------------------- |
+| **PNL-4** | Click a token whose `token.explanation` is non-null | `true`       | that token (its explanation is already attached, ARCH-2)      |
+| **PNL-5** | Click a different token while open                  | stays `true` | replaced; the panel stays open and its content swaps in place |
+| **PNL-6** | Click the active token again                        | stays `true` | unchanged (clicking again does **not** close the panel)       |
+| **PNL-7** | Close button or Escape                              | `false`      | **unchanged** (see §8.3)                                      |
+| **PNL-8** | Switch example                                      | `false`      | `null`                                                        |
 
 - **PNL-9** Tokens without an explanation are rendered as `<span>` and cannot open the panel. `handleTokenClick` also ignores them as a guard.
 - **PNL-10** Opening the panel does not change the URL or history, and the panel's state is not persisted. On reload the panel is closed.
@@ -49,12 +49,12 @@ stateDiagram-v2
 
 When open, the panel shows these regions from top to bottom. Each optional region appears only if the matching field is present (see EXP-7 in the content spec).
 
-| Region | Source | Markup |
-|---|---|---|
-| Header (does not scroll) | `title`, `short` | `<h2><code>{title}</code></h2>`, close button, `<p>{short}</p>` |
-| Details | `details` | Blocks split on `\n\n`; each becomes `<p>` or `<ul>` (see EXP-16/17 in the content spec) |
-| Syntax | `syntax` | `<h3>Syntax</h3>` + `<pre><code>`. Whitespace is preserved and the block scrolls horizontally. |
-| Learn more | `links` | `<h3>Learn more</h3>` + `<ul>` of `<a target="_blank" rel="noopener noreferrer">` links, each with a decorative external-link icon (`aria-hidden`) |
+| Region                   | Source           | Markup                                                                                                                                                                                                 |
+| ------------------------ | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Header (does not scroll) | `title`, `short` | `<h2><code>{title}</code></h2>`, close button, `<p>{short}</p>`                                                                                                                                        |
+| Details                  | `details`        | Blocks split on `\n\n`; each becomes `<p>` or `<ul>` (see EXP-16/17 in the content spec)                                                                                                               |
+| Syntax                   | `syntax`         | `<h3>Syntax</h3>` + `<pre tabIndex=0 role="region" aria-label="Syntax"><code>`. Whitespace is preserved and the block scrolls horizontally. It is focusable so keyboard users can scroll it (ARCH-29). |
+| Learn more               | `links`          | `<h3>Learn more</h3>` + `<ul>` of `<a target="_blank" rel="noopener noreferrer">` links, each with a decorative external-link icon (`aria-hidden`)                                                     |
 
 - **PNL-11** The header stays fixed and the body scrolls on its own (`overflow-y: auto`), so the close button is always reachable.
 - **PNL-12** All text is rendered as text nodes; no field is ever rendered as HTML (see EXP-5 in the content spec).
@@ -75,28 +75,28 @@ When open, the panel shows these regions from top to bottom. Each optional regio
 
 ### 5.3 Motion
 
-- **PNL-19** **Required:** panel transitions must respect `prefers-reduced-motion: reduce`.
-  > ⚠️ **Currently violated.** Only `ExampleToggler` has a reduced-motion rule; the panel always animates.
+- **PNL-19** Panel transitions respect `prefers-reduced-motion: reduce`.
+  > ✅ Fixed 2026-10-11 by the global reduced-motion rule (ARCH-12), and verified by `reduced_motion.feature`.
 
 ## 6. Keyboard and focus
 
-| # | Behaviour | Current implementation |
-|---|---|---|
-| **PNL-20** | When the panel goes from closed to open, focus moves to the close button. | `useEffect([isOpen])`. Swapping content while the panel is open (PNL-5) does **not** move focus. |
-| **PNL-21** | Escape closes the panel, whether focus is inside it or elsewhere on the page. | A `keydown` listener on `document` while open, plus an `onKeyDown` handler on the `<aside>` that calls `stopPropagation()` so `onClose` fires only once. |
-| **PNL-22** | Tab and Shift+Tab wrap between the first and last focusable elements inside the panel. | A `keydown` listener on the panel. The focusable elements are `a`, `button` and `[tabindex]:not([tabindex="-1"])`, excluding disabled ones. |
-| **PNL-23** | **Required:** when the panel closes, focus returns to the token that opened it. | ⚠️ **Not implemented.** The panel content unmounts (PNL-2), so focus falls back to `<body>` and keyboard users lose their place in the Dockerfile. |
+| #          | Behaviour                                                                              | Current implementation                                                                                                                                   |
+| ---------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **PNL-20** | When the panel goes from closed to open, focus moves to the close button.              | `useEffect([isOpen])`. Swapping content while the panel is open (PNL-5) does **not** move focus.                                                         |
+| **PNL-21** | Escape closes the panel, whether focus is inside it or elsewhere on the page.          | A `keydown` listener on `document` while open, plus an `onKeyDown` handler on the `<aside>` that calls `stopPropagation()` so `onClose` fires only once. |
+| **PNL-22** | Tab and Shift+Tab wrap between the first and last focusable elements inside the panel. | A `keydown` listener on the panel. The focusable elements are `a`, `button` and `[tabindex]:not([tabindex="-1"])`, excluding disabled ones.              |
+| **PNL-23** | **Required:** when the panel closes, focus returns to the token that opened it.        | ⚠️ **Not implemented.** The panel content unmounts (PNL-2), so focus falls back to `<body>` and keyboard users lose their place in the Dockerfile.       |
 
 ## 7. Semantics and accessibility
 
-| Attribute | Value | Notes |
-|---|---|---|
-| `role` | `complementary` | A landmark. |
-| `aria-label` | `"Explanation panel"` | Static. Does not name the token being explained. |
-| `aria-hidden` | `"true"` / `"false"` | Mirrors `isOpen`. Tests use it as the open/closed signal (§9). |
-| `aria-live` | `"polite"` | Applies to the whole panel, so every open and every content swap is announced. |
-| Close button | `aria-label="Close explanation panel"`, 28×28 px | The icon is decorative (`aria-hidden`). |
-| Trigger token | `<button aria-pressed>` | `aria-pressed` reflects `activeToken`, not `isOpen` (see §8.3). |
+| Attribute     | Value                                            | Notes                                                                          |
+| ------------- | ------------------------------------------------ | ------------------------------------------------------------------------------ |
+| `role`        | `complementary`                                  | A landmark.                                                                    |
+| `aria-label`  | `"Explanation panel"`                            | Static. Does not name the token being explained.                               |
+| `aria-hidden` | `"true"` / `"false"`                             | Mirrors `isOpen`. Tests use it as the open/closed signal (§9).                 |
+| `aria-live`   | `"polite"`                                       | Applies to the whole panel, so every open and every content swap is announced. |
+| Close button  | `aria-label="Close explanation panel"`, 28×28 px | The icon is decorative (`aria-hidden`).                                        |
+| Trigger token | `<button aria-pressed>`                          | `aria-pressed` reflects `activeToken`, not `isOpen` (see §8.3).                |
 
 ## 8. Known deviations and open questions
 
@@ -144,18 +144,18 @@ The toolbar hint "Click a keyword, flag, or command fragment to explore" is an `
 
 Tests decide whether the panel is open or closed only by reading the `aria-hidden` attribute on `[data-testid="side-panel"]`. The title is read from `[data-testid="side-panel"] h2 code`, and the close button is found by `aria-label="Close explanation panel"`. If §8.1 or §8.2 changes these attributes, the Cucumber steps in [site.steps.js](../../web/features/step_definitions/site.steps.js) must change in the same PR.
 
-| Rule | Unit | E2E | What to add |
-|---|---|---|---|
-| PNL-4 open on token click | ✅ | ✅ | |
-| PNL-5 content swaps while open | ❌ | ✅ | Unit test: click `FROM` then `WORKDIR` |
-| PNL-6 same-token click | ❌ | ❌ | Pin whichever behaviour §8.4 decides |
-| PNL-7 close via button | ✅ | ✅ | |
-| PNL-7 close via Escape | ✅ (focus on the panel and on the document) | ❌ | E2E: press Escape |
-| PNL-8 close on example switch | ✅ | ✅ (`example_switcher.feature`) | |
-| PNL-12 text-only rendering | ❌ | — | See EXP-5 in the content spec |
-| PNL-13/16 layout split / bottom sheet | — | ❌ | E2E at 1280px and 375px: panel bounding box ≈ one third of the width / pinned to the bottom |
-| PNL-19 reduced motion | ❌ | ❌ | E2E with `emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}])`: computed `transition-duration` is `0s` |
-| PNL-20 focus on open | ❌ | ❌ | `document.activeElement` is the close button. Preact runs `useEffect` asynchronously, so in jsdom wrap the assertion in `waitFor`; an immediate assertion still sees the clicked token focused. |
-| PNL-22 Tab wrapping | ❌ | ❌ | Replace or remove according to §8.1 |
-| PNL-23 focus restored on close | ❌ | ❌ | Fails today; add it before fixing |
-| Links open safely | ✅ partial | ❌ | Assert `rel="noopener noreferrer"` |
+| Rule                                  | Unit                                        | E2E                             | What to add                                                                                                                                                                                     |
+| ------------------------------------- | ------------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PNL-4 open on token click             | ✅                                          | ✅                              |                                                                                                                                                                                                 |
+| PNL-5 content swaps while open        | ❌                                          | ✅                              | Unit test: click `FROM` then `WORKDIR`                                                                                                                                                          |
+| PNL-6 same-token click                | ❌                                          | ❌                              | Pin whichever behaviour §8.4 decides                                                                                                                                                            |
+| PNL-7 close via button                | ✅                                          | ✅                              |                                                                                                                                                                                                 |
+| PNL-7 close via Escape                | ✅ (focus on the panel and on the document) | ❌                              | E2E: press Escape                                                                                                                                                                               |
+| PNL-8 close on example switch         | ✅                                          | ✅ (`example_switcher.feature`) |                                                                                                                                                                                                 |
+| PNL-12 text-only rendering            | ❌                                          | —                               | See EXP-5 in the content spec                                                                                                                                                                   |
+| PNL-13/16 layout split / bottom sheet | —                                           | ❌                              | E2E at 1280px and 375px: panel bounding box ≈ one third of the width / pinned to the bottom                                                                                                     |
+| PNL-19 reduced motion                 | —                                           | ✅ (`reduced_motion.feature`)   |                                                                                                                                                                                                 |
+| PNL-20 focus on open                  | ❌                                          | ❌                              | `document.activeElement` is the close button. Preact runs `useEffect` asynchronously, so in jsdom wrap the assertion in `waitFor`; an immediate assertion still sees the clicked token focused. |
+| PNL-22 Tab wrapping                   | ❌                                          | ❌                              | Replace or remove according to §8.1                                                                                                                                                             |
+| PNL-23 focus restored on close        | ❌                                          | ❌                              | Fails today; add it before fixing                                                                                                                                                               |
+| Links open safely                     | ✅ partial                                  | ❌                              | Assert `rel="noopener noreferrer"`                                                                                                                                                              |

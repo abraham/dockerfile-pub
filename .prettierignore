@@ -1,0 +1,6 @@
+# Generated or vendored files; everything else is formatted.
+web/node_modules/
+web/dist/
+web/coverage/
+web/features/artifacts/
+web/package-lock.json

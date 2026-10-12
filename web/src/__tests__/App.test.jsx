@@ -130,13 +130,17 @@ describe('App', () => {
       render(<App />);
       await user.click(screen.getAllByRole('button', { name: /^FROM:/i })[0]);
       const links = screen.getAllByRole('link');
-      const docLink = links.find((l) => l.href.startsWith('https://docs.docker.com/'));
+      const docLink = links.find((l) =>
+        l.getAttribute('href')?.startsWith('https://docs.docker.com/'),
+      );
       expect(docLink).toBeDefined();
     });
   });
 
   it('renders the copy button in the viewer header', () => {
     render(<App />);
-    expect(screen.getByRole('button', { name: /copy dockerfile to clipboard/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /copy dockerfile to clipboard/i }),
+    ).toBeInTheDocument();
   });
 });
