@@ -1,0 +1,131 @@
+line 0  instruction (RUN, start 0, shell)
+  "RUN"  keyword  instruction RUN
+  " "  whitespace  —
+  "--mount"  flag  flag RUN --mount
+  "="  punctuation  flag RUN --mount
+  "type=cache,target=/root/.npm"  text  flag RUN --mount
+  " "  whitespace  —
+  "\\"  escape  line-continuation \
+line 1  continuation (RUN, start 0, shell)
+  "    "  whitespace  —
+  "npm"  text  shell RUN command cmd=npm [0] text=npm
+  " "  whitespace  —
+  "ci"  text  shell RUN argument cmd=npm [1] text=ci
+  " "  whitespace  —
+  "--omit=dev"  text  shell RUN option cmd=npm [2] text=--omit=dev
+line 2  instruction (HEALTHCHECK, start 2, shell)
+  "HEALTHCHECK"  keyword  instruction HEALTHCHECK
+  " "  whitespace  —
+  "--interval"  flag  flag HEALTHCHECK --interval
+  "="  punctuation  flag HEALTHCHECK --interval
+  "30s"  text  flag HEALTHCHECK --interval
+  " "  whitespace  —
+  "--timeout"  flag  flag HEALTHCHECK --timeout
+  "="  punctuation  flag HEALTHCHECK --timeout
+  "5s"  text  flag HEALTHCHECK --timeout
+  " "  whitespace  —
+  "--retries"  flag  flag HEALTHCHECK --retries
+  "="  punctuation  flag HEALTHCHECK --retries
+  "3"  text  flag HEALTHCHECK --retries
+  " "  whitespace  —
+  "\\"  escape  line-continuation \
+line 3  continuation (HEALTHCHECK, start 2, shell)
+  "    "  whitespace  —
+  "CMD"  keyword  subkeyword HEALTHCHECK CMD
+  " "  whitespace  —
+  "wget"  text  shell HEALTHCHECK command cmd=wget [0] text=wget
+  " "  whitespace  —
+  "-qO-"  text  shell HEALTHCHECK option cmd=wget [1] text=-qO-
+  " "  whitespace  —
+  "http://localhost:3000/health"  text  shell HEALTHCHECK argument cmd=wget [2] text=http://localhost:3000/health
+  " "  whitespace  —
+  "||"  operator  shell HEALTHCHECK operator [-1] text=|| (wget → exit)
+  " "  whitespace  —
+  "exit"  text  shell HEALTHCHECK command cmd=exit [0] text=exit
+  " "  whitespace  —
+  "1"  text  shell HEALTHCHECK argument cmd=exit [1] text=1
+line 4  instruction (FROM, start 4, -)
+  "FROM"  keyword  instruction FROM
+  " "  whitespace  —
+  "node:"  text  argument FROM image text=node:${NODE_VERSION}-alpine
+  "${NODE_VERSION}"  variable  variable NODE_VERSION (FROM, docker) text=${NODE_VERSION}
+  "-alpine"  text  argument FROM image text=node:${NODE_VERSION}-alpine
+  " "  whitespace  —
+  "AS"  keyword  subkeyword FROM AS
+  " "  whitespace  —
+  "base"  text  argument FROM stage-name text=base
+line 5  instruction (CMD, start 5, exec)
+  "CMD"  keyword  instruction CMD
+  " "  whitespace  —
+  "["  punctuation  json-array CMD
+  "\"node\""  string  exec-form CMD executable [0] text=node
+  ","  punctuation  json-array CMD
+  " "  whitespace  —
+  "\"server.js\""  string  exec-form CMD argument [1] text=server.js
+  "]"  punctuation  json-array CMD
+line 6  instruction (CMD, start 6, shell)
+  "CMD"  keyword  instruction CMD
+  " "  whitespace  —
+  "["  text  shell CMD command cmd=[node, [0] text=['node',
+  "'node'"  string  shell CMD command cmd=[node, [0] text=['node',
+  ","  text  shell CMD command cmd=[node, [0] text=['node',
+  " "  whitespace  —
+  "'server.js'"  string  shell CMD argument cmd=[node, [1] text='server.js']
+  "]"  text  shell CMD argument cmd=[node, [1] text='server.js']
+line 7  instruction (RUN, start 7, shell)
+  "RUN"  keyword  instruction RUN
+  " "  whitespace  —
+  "echo"  text  shell RUN command cmd=echo [0] text=echo
+  " "  whitespace  —
+  "it"  text  shell RUN argument cmd=echo [1] text=it's here
+  "'s here"  string  shell RUN argument cmd=echo [1] text=it's here
+line 8  instruction (RUN, start 8, shell)
+  "RUN"  keyword  instruction RUN
+  " "  whitespace  —
+  "<<EOF"  operator  heredoc RUN EOF
+line 9  heredoc (RUN, start 8, shell)
+  "apt-get"  text  shell RUN command cmd=apt-get [0] text=apt-get
+  " "  whitespace  —
+  "update"  text  shell RUN argument cmd=apt-get [1] text=update
+line 10  heredoc (RUN, start 8, shell)
+  "EOF"  operator  heredoc RUN EOF
+line 11  instruction (FROM, start 11, -)
+  "from"  keyword  instruction FROM
+  " "  whitespace  —
+  "node"  text  argument FROM image text=node
+line 12  unknown
+  "FROMnode"  text  —
+line 13  instruction (ONBUILD, start 13, -)
+  "ONBUILD"  keyword  instruction ONBUILD
+  " "  whitespace  —
+  "RUN"  keyword  instruction RUN
+  " "  whitespace  —
+  "make"  text  shell RUN command cmd=make [0] text=make
+line 14  instruction (ENV, start 14, -)
+  "ENV"  keyword  instruction ENV
+  " "  whitespace  —
+  "NODE_ENV"  text  argument ENV key text=NODE_ENV
+  "="  punctuation  —
+  "production"  text  argument ENV value text=production
+line 15  instruction (COPY, start 15, -)
+  "COPY"  keyword  instruction COPY
+  " "  whitespace  —
+  "--chown"  flag  flag COPY --chown
+  "="  punctuation  flag COPY --chown
+  "\"a b\""  string  flag COPY --chown
+  " "  whitespace  —
+  "src/"  text  argument COPY source text=src/
+  " "  whitespace  —
+  "/app/"  text  argument COPY destination text=/app/
+line 16  instruction (RUN, start 16, shell)
+  "RUN"  keyword  instruction RUN
+  " "  whitespace  —
+  "echo"  text  shell RUN command cmd=echo [0] text=echo
+  " "  whitespace  —
+  "$("  operator  shell RUN substitution [-1] text=$(
+  "date"  text  shell RUN command cmd=date [0] text=date
+  ")"  operator  shell RUN substitution [-1] text=)
+  " "  whitespace  —
+  "$1"  variable  variable 1 (RUN, shell) text=$1
+  " "  whitespace  —
+  "2>&1"  operator  shell RUN redirection cmd=echo [-1] text=2>&1

@@ -2,8 +2,11 @@ import type { Line, Token as TokenData } from '../data/tokenizer';
 import type { Explanation } from '../data/explanations';
 import styles from './DockerfileViewer.module.css';
 
-/** A token with its explanation resolved by `App` (ARCH-2). */
-export type ResolvedToken = TokenData & { explanation: Explanation | null };
+/**
+ * A token with its explanation resolved by `App` (ARCH-2). `summary` is the
+ * flattened `short` text, used for the tooltip and accessible name (EXP-29).
+ */
+export type ResolvedToken = TokenData & { explanation: Explanation | null; summary: string };
 
 export type ResolvedLine = Omit<Line, 'tokens'> & { tokens: ResolvedToken[] };
 
@@ -13,7 +16,7 @@ interface DockerfileViewerProps {
   onTokenClick: (token: ResolvedToken) => void;
 }
 
-/** Renders a tokenized Dockerfile with interactive keyword/flag tokens. */
+/** Renders a tokenized Dockerfile; every token with an explanation is a button. */
 export function DockerfileViewer({ lines, activeTokenId, onTokenClick }: DockerfileViewerProps) {
   return (
     <div class={styles.viewer} role="region" aria-label="Dockerfile source">
@@ -72,8 +75,8 @@ function Token({ token, isActive, onTokenClick }: TokenProps) {
         type="button"
         class={className}
         onClick={() => onTokenClick(token)}
-        title={explanation.short}
-        aria-label={`${token.text}: ${explanation.short}`}
+        title={token.summary}
+        aria-label={`${token.text}: ${token.summary}`}
         aria-pressed={isActive}
       >
         {token.text}

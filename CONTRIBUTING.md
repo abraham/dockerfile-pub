@@ -42,35 +42,36 @@ npm run size      # bundle-size budget (after build)
 
 ## Adding or updating an explanation
 
-Explanations live in `web/src/data/explanations.ts`. Each entry maps a **Dockerfile instruction keyword** or a **flag name** to an `Explanation` object:
+Hand-written explanations live in `web/src/data/content/` (`instructions.ts`, `flags.ts`, `keywords.ts`, `directives.ts`). Each entry is a `register(…)` call keyed by the token's ref; the rules are in [explanation-content-model.md](./docs/specs/explanation-content-model.md):
 
 ```ts
-KEYWORD_OR_FLAG: {
-  title: 'KEYWORD',          // displayed in the panel heading
-  short: 'One-sentence summary shown as a tooltip on hover.',
-  details:
-    'First paragraph.\n\n' +
-    'Second paragraph (separate with \\n\\n).',
-  syntax: 'KEYWORD <arg> [<optional>]',  // shown in a monospace block
-  links: [
-    { label: 'Official docs', url: 'https://docs.docker.com/reference/dockerfile/#keyword' },
-  ],
-},
+register({
+  ref: { kind: 'flag', instruction: 'COPY', flag: '--chown' },
+  appliesTo: ['COPY', 'ADD'], // flags only: registered under each instruction
+  title: '--chown',
+  short: 'Sets the owner of the copied files, without a separate `RUN chown`.',
+  details: 'First paragraph.\n\n- `a`: a list item\n- `b`: another',
+  syntax: '--chown=<user>[:<group>]',
+  links: [{ label: '--chown reference', url: `${REFERENCE_URL}#copy---chown---chmod` }],
+  related: [{ kind: 'instruction', instruction: 'USER' }],
+});
 ```
 
 Guidelines:
 
-- Keep `short` to one sentence (≤ 120 characters). It doubles as the button `title` attribute.
-- Use `\n\n` to separate paragraphs in `details`.
-- Always include at least one link to the official Docker documentation.
-- Flag keys must match the flag name **without** its value: `--mount` (not `--mount=type=cache`).
+- Keep `short` to one sentence (≤ 120 characters) ending with a period. It doubles as the button tooltip and accessible name.
+- `details` is one to four blocks separated by blank lines. A block whose every line starts with a hyphen and a space is a list; backticks mark inline code. Nothing else is markup.
+- The first link is the official Dockerfile reference anchor. Write in US English.
+- `register` validates every entry when the module loads, so `npm run test:run` catches mistakes.
+
+Command knowledge (what `npm ci` or `adduser -S` means) lives in the catalog in `web/src/data/commands/catalog.ts`; see [run-command-explanations.md](./docs/specs/run-command-explanations.md). Only add facts you've checked against the tool's own documentation.
 
 ## Tokenizer
 
-The tokenizer in `web/src/data/tokenizer.ts` converts Dockerfile text into `Line` and `Token` objects. If you encounter a valid Dockerfile construct that is not tokenised correctly:
+The tokenizer in `web/src/data/tokenizer/` converts Dockerfile text into `Line` and `Token` objects, each token with an explanation ref; the rules are in [tokenizer.md](./docs/specs/tokenizer.md). If you encounter a valid Dockerfile construct that is not tokenized correctly:
 
-1. Add a failing test in `web/src/__tests__/tokenizer.test.ts` that describes the expected output.
-2. Fix `parseLine` or `tokenizeArgs` in `tokenizer.ts`.
+1. Add a failing test in `web/src/__tests__/tokenizer.test.ts`, or a fixture in `web/src/__tests__/fixtures/` (run `npx vitest run -u` to write its snapshot, then review it).
+2. Fix the relevant lexer module (`lines.ts`, `instructions.ts`, `words.ts`, `json-array.ts`, `shell.ts` or `heredoc.ts`).
 3. Verify all existing tests still pass: `npm run test:run`.
 
 ## Pull request checklist

@@ -14,7 +14,12 @@ The panel shows the explanation for the token the user selected. It sits next to
 ## 2. Component contract
 
 ```jsx
-<SidePanel token={Token & { explanation: Explanation } | null} isOpen={boolean} onClose={() => void} />
+<SidePanel
+  token={ResolvedToken | null} // Token & { explanation, summary }
+  isOpen={boolean}
+  onClose={() => void}
+  onNavigate={(ref: ExplanationRef) => void} // "See also"
+/>
 ```
 
 - **PNL-1** The panel is **controlled**. `App` owns `isOpen` and `activeToken`. The panel never changes its own visibility; it only calls `onClose`.
@@ -49,12 +54,16 @@ stateDiagram-v2
 
 When open, the panel shows these regions from top to bottom. Each optional region appears only if the matching field is present (see EXP-7 in the content spec).
 
-| Region                   | Source           | Markup                                                                                                                                                                                                 |
-| ------------------------ | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Header (does not scroll) | `title`, `short` | `<h2><code>{title}</code></h2>`, close button, `<p>{short}</p>`                                                                                                                                        |
-| Details                  | `details`        | Blocks split on `\n\n`; each becomes `<p>` or `<ul>` (see EXP-16/17 in the content spec)                                                                                                               |
-| Syntax                   | `syntax`         | `<h3>Syntax</h3>` + `<pre tabIndex=0 role="region" aria-label="Syntax"><code>`. Whitespace is preserved and the block scrolls horizontally. It is focusable so keyboard users can scroll it (ARCH-29). |
-| Learn more               | `links`          | `<h3>Learn more</h3>` + `<ul>` of `<a target="_blank" rel="noopener noreferrer">` links, each with a decorative external-link icon (`aria-hidden`)                                                     |
+| Region                   | Source                       | Markup                                                                                                                                                                                                 |
+| ------------------------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Header (does not scroll) | `category`, `title`, `short` | `<p>{category}</p>` label, `<h2><code>{title}</code></h2>`, close button, `<p>{short}</p>` with rich-text inline content                                                                               |
+| Deprecation notice       | `deprecated`                 | `<p role="note">Deprecated since {since}. Use {instead} instead.</p>`, in the header under the lead paragraph                                                                                          |
+| Details                  | `details`                    | One `<p>` per paragraph block and one `<ul>` per list block (EXP-16, EXP-17). Nothing is guessed from the text.                                                                                        |
+| Syntax                   | `syntax`                     | `<h3>Syntax</h3>` + `<pre tabIndex=0 role="region" aria-label="Syntax"><code>`. Whitespace is preserved and the block scrolls horizontally. It is focusable so keyboard users can scroll it (ARCH-29). |
+| See also                 | `related`                    | `<h3>See also</h3>` + `<ul>` of `<button>`s labelled like `COPY --from`. Clicking one calls `onNavigate(ref)`; `App` swaps the content in place, as for PNL-5, and focus moves to the close button.    |
+| Learn more               | `links`                      | `<h3>Learn more</h3>` + `<ul>` of `<a target="_blank" rel="noopener noreferrer">` links, each with a decorative external-link icon (`aria-hidden`)                                                     |
+
+- Inline content (`short`, list items, paragraphs, `instead`) renders strings as text nodes and `{ code }` parts as `<code>` elements (EXP-5, EXP-18).
 
 - **PNL-11** The header stays fixed and the body scrolls on its own (`overflow-y: auto`), so the close button is always reachable.
 - **PNL-12** All text is rendered as text nodes; no field is ever rendered as HTML (see EXP-5 in the content spec).
@@ -138,7 +147,7 @@ Because of PNL-2, content unmounts the moment `isOpen` becomes `false`, so an em
 
 ### 8.7 Hint text hidden while open
 
-The toolbar hint "Click a keyword, flag, or command fragment to explore" is an `aria-live` region that empties while the panel is open, and it is hidden on mobile. This is minor; note it if §8.2 introduces a single announcement channel.
+The toolbar hint "Click any highlighted part of the Dockerfile to explore" (CMDX-25) is an `aria-live` region that empties while the panel is open, and it is hidden on mobile. This is minor; note it if §8.2 introduces a single announcement channel.
 
 ## 9. Testing contract
 
@@ -147,12 +156,12 @@ Tests decide whether the panel is open or closed only by reading the `aria-hidde
 | Rule                                  | Unit                                        | E2E                             | What to add                                                                                                                                                                                     |
 | ------------------------------------- | ------------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | PNL-4 open on token click             | ✅                                          | ✅                              |                                                                                                                                                                                                 |
-| PNL-5 content swaps while open        | ❌                                          | ✅                              | Unit test: click `FROM` then `WORKDIR`                                                                                                                                                          |
+| PNL-5 content swaps while open        | ✅ ("See also" swap in `App.test.tsx`)      | ✅                              |                                                                                                                                                                                                 |
 | PNL-6 same-token click                | ❌                                          | ❌                              | Pin whichever behaviour §8.4 decides                                                                                                                                                            |
 | PNL-7 close via button                | ✅                                          | ✅                              |                                                                                                                                                                                                 |
 | PNL-7 close via Escape                | ✅ (focus on the panel and on the document) | ❌                              | E2E: press Escape                                                                                                                                                                               |
 | PNL-8 close on example switch         | ✅                                          | ✅ (`example_switcher.feature`) |                                                                                                                                                                                                 |
-| PNL-12 text-only rendering            | ❌                                          | —                               | See EXP-5 in the content spec                                                                                                                                                                   |
+| PNL-12 text-only rendering            | ✅ (`SidePanel.test.tsx`, EXP-5)            | —                               |                                                                                                                                                                                                 |
 | PNL-13/16 layout split / bottom sheet | —                                           | ❌                              | E2E at 1280px and 375px: panel bounding box ≈ one third of the width / pinned to the bottom                                                                                                     |
 | PNL-19 reduced motion                 | —                                           | ✅ (`reduced_motion.feature`)   |                                                                                                                                                                                                 |
 | PNL-20 focus on open                  | ❌                                          | ❌                              | `document.activeElement` is the close button. Preact runs `useEffect` asynchronously, so in jsdom wrap the assertion in `waitFor`; an immediate assertion still sees the clicked token focused. |

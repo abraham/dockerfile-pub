@@ -1,0 +1,95 @@
+line 0  instruction (FROM, start 0, -)
+  "FROM"  keyword  instruction FROM
+  " "  whitespace  —
+  "--platform"  flag  flag FROM --platform
+  "="  punctuation  flag FROM --platform
+  "$BUILDPLATFORM"  text  flag FROM --platform
+  " "  whitespace  —
+  "golang:1.24"  text  argument FROM image text=golang:1.24
+  " "  whitespace  —
+  "AS"  keyword  subkeyword FROM AS
+  " "  whitespace  —
+  "build"  text  argument FROM stage-name text=build
+line 1  instruction (ARG, start 1, -)
+  "ARG"  keyword  instruction ARG
+  " "  whitespace  —
+  "TARGETOS"  text  argument ARG key text=TARGETOS
+  " "  whitespace  —
+  "TARGETARCH"  text  argument ARG key text=TARGETARCH
+line 2  instruction (WORKDIR, start 2, -)
+  "WORKDIR"  keyword  instruction WORKDIR
+  " "  whitespace  —
+  "/src"  text  argument WORKDIR path text=/src
+line 3  instruction (COPY, start 3, -)
+  "COPY"  keyword  instruction COPY
+  " "  whitespace  —
+  "go.mod"  text  argument COPY source text=go.mod
+  " "  whitespace  —
+  "go.sum"  text  argument COPY source text=go.sum
+  " "  whitespace  —
+  "./"  text  argument COPY destination text=./
+line 4  instruction (RUN, start 4, shell)
+  "RUN"  keyword  instruction RUN
+  " "  whitespace  —
+  "--mount"  flag  flag RUN --mount
+  "="  punctuation  flag RUN --mount
+  "type=cache,target=/go/pkg/mod"  text  flag RUN --mount
+  " "  whitespace  —
+  "go"  text  shell RUN command cmd=go [0] text=go
+  " "  whitespace  —
+  "mod"  text  shell RUN argument cmd=go [1] text=mod
+  " "  whitespace  —
+  "download"  text  shell RUN argument cmd=go [2] text=download
+line 5  instruction (COPY, start 5, -)
+  "COPY"  keyword  instruction COPY
+  " "  whitespace  —
+  "."  text  argument COPY source text=.
+  " "  whitespace  —
+  "."  text  argument COPY destination text=.
+line 6  instruction (RUN, start 6, shell)
+  "RUN"  keyword  instruction RUN
+  " "  whitespace  —
+  "CGO_ENABLED=0"  text  shell RUN assignment [-1] text=CGO_ENABLED=0
+  " "  whitespace  —
+  "GOOS="  text  shell RUN assignment [-1] text=GOOS=$TARGETOS
+  "$TARGETOS"  variable  variable TARGETOS (RUN, shell) text=$TARGETOS
+  " "  whitespace  —
+  "GOARCH="  text  shell RUN assignment [-1] text=GOARCH=$TARGETARCH
+  "$TARGETARCH"  variable  variable TARGETARCH (RUN, shell) text=$TARGETARCH
+  " "  whitespace  —
+  "go"  text  shell RUN command cmd=go [0] text=go
+  " "  whitespace  —
+  "build"  text  shell RUN argument cmd=go [1] text=build
+  " "  whitespace  —
+  "-o"  text  shell RUN option cmd=go [2] text=-o
+  " "  whitespace  —
+  "/out/app"  text  shell RUN argument cmd=go [3] text=/out/app
+  " "  whitespace  —
+  "./cmd/app"  text  shell RUN argument cmd=go [4] text=./cmd/app
+line 7  blank
+line 8  instruction (FROM, start 8, -)
+  "FROM"  keyword  instruction FROM
+  " "  whitespace  —
+  "scratch"  text  argument FROM image text=scratch
+line 9  instruction (COPY, start 9, -)
+  "COPY"  keyword  instruction COPY
+  " "  whitespace  —
+  "--from"  flag  flag COPY --from
+  "="  punctuation  flag COPY --from
+  "build"  text  flag COPY --from
+  " "  whitespace  —
+  "/out/app"  text  argument COPY source text=/out/app
+  " "  whitespace  —
+  "/app"  text  argument COPY destination text=/app
+line 10  instruction (VOLUME, start 10, -)
+  "VOLUME"  keyword  instruction VOLUME
+  " "  whitespace  —
+  "["  punctuation  json-array VOLUME
+  "\"/data\""  string  argument VOLUME path text=/data
+  "]"  punctuation  json-array VOLUME
+line 11  instruction (ENTRYPOINT, start 11, exec)
+  "ENTRYPOINT"  keyword  instruction ENTRYPOINT
+  " "  whitespace  —
+  "["  punctuation  json-array ENTRYPOINT
+  "\"/app\""  string  exec-form ENTRYPOINT executable [0] text=/app
+  "]"  punctuation  json-array ENTRYPOINT

@@ -1,0 +1,138 @@
+line 0  directive
+  "# "  directive  directive syntax
+  "syntax"  directive  directive syntax
+  "="  punctuation  directive syntax
+  "docker/dockerfile:1"  text  directive syntax
+line 1  directive
+  "# "  directive  directive check
+  "check"  directive  directive check
+  "="  punctuation  directive check
+  "skip=JSONArgsRecommended"  text  directive check
+line 2  instruction (FROM, start 2, -)
+  "FROM"  keyword  instruction FROM
+  " "  whitespace  —
+  "python:3.13-slim"  text  argument FROM image text=python:3.13-slim
+  " "  whitespace  —
+  "AS"  keyword  subkeyword FROM AS
+  " "  whitespace  —
+  "base"  text  argument FROM stage-name text=base
+line 3  instruction (ENV, start 3, -)
+  "ENV"  keyword  instruction ENV
+  " "  whitespace  —
+  "PYTHONDONTWRITEBYTECODE"  text  argument ENV key text=PYTHONDONTWRITEBYTECODE
+  "="  punctuation  —
+  "1"  text  argument ENV value text=1
+  " "  whitespace  —
+  "\\"  escape  line-continuation \
+line 4  continuation (ENV, start 3, -)
+  "    "  whitespace  —
+  "PYTHONUNBUFFERED"  text  argument ENV key text=PYTHONUNBUFFERED
+  "="  punctuation  —
+  "1"  text  argument ENV value text=1
+line 5  instruction (WORKDIR, start 5, -)
+  "WORKDIR"  keyword  instruction WORKDIR
+  " "  whitespace  —
+  "/srv"  text  argument WORKDIR path text=/srv
+line 6  blank
+line 7  instruction (RUN, start 7, shell)
+  "RUN"  keyword  instruction RUN
+  " "  whitespace  —
+  "apt-get"  text  shell RUN command cmd=apt-get [0] text=apt-get
+  " "  whitespace  —
+  "update"  text  shell RUN argument cmd=apt-get [1] text=update
+  " "  whitespace  —
+  "\\"  escape  line-continuation \
+line 8  comment (RUN, start 7, shell)
+  "    "  whitespace  —
+  "# install build tools only"  comment  —
+line 9  continuation (RUN, start 7, shell)
+  "    "  whitespace  —
+  "&&"  operator  shell RUN operator [-1] text=&& (apt-get → apt-get)
+  " "  whitespace  —
+  "apt-get"  text  shell RUN command cmd=apt-get [0] text=apt-get
+  " "  whitespace  —
+  "install"  text  shell RUN argument cmd=apt-get [1] text=install
+  " "  whitespace  —
+  "-y"  text  shell RUN option cmd=apt-get [2] text=-y
+  " "  whitespace  —
+  "--no-install-recommends"  text  shell RUN option cmd=apt-get [3] text=--no-install-recommends
+  " "  whitespace  —
+  "build-essential"  text  shell RUN argument cmd=apt-get [4] text=build-essential
+  " "  whitespace  —
+  "\\"  escape  line-continuation \
+line 10  continuation (RUN, start 7, shell)
+  "    "  whitespace  —
+  "&&"  operator  shell RUN operator [-1] text=&& (apt-get → rm)
+  " "  whitespace  —
+  "rm"  text  shell RUN command cmd=rm [0] text=rm
+  " "  whitespace  —
+  "-rf"  text  shell RUN option cmd=rm [1] text=-rf
+  " "  whitespace  —
+  "/var/lib/apt/lists/*"  text  shell RUN argument cmd=rm [2] text=/var/lib/apt/lists/*
+line 11  blank
+line 12  instruction (COPY, start 12, -)
+  "COPY"  keyword  instruction COPY
+  " "  whitespace  —
+  "requirements.txt"  text  argument COPY source text=requirements.txt
+  " "  whitespace  —
+  "."  text  argument COPY destination text=.
+line 13  instruction (RUN, start 13, shell)
+  "RUN"  keyword  instruction RUN
+  " "  whitespace  —
+  "pip"  text  shell RUN command cmd=pip [0] text=pip
+  " "  whitespace  —
+  "install"  text  shell RUN argument cmd=pip [1] text=install
+  " "  whitespace  —
+  "--no-cache-dir"  text  shell RUN option cmd=pip [2] text=--no-cache-dir
+  " "  whitespace  —
+  "-r"  text  shell RUN option cmd=pip [3] text=-r
+  " "  whitespace  —
+  "requirements.txt"  text  shell RUN argument cmd=pip [4] text=requirements.txt
+line 14  instruction (COPY, start 14, -)
+  "COPY"  keyword  instruction COPY
+  " "  whitespace  —
+  "."  text  argument COPY source text=.
+  " "  whitespace  —
+  "."  text  argument COPY destination text=.
+line 15  instruction (LABEL, start 15, -)
+  "LABEL"  keyword  instruction LABEL
+  " "  whitespace  —
+  "org.opencontainers.image.source"  text  argument LABEL key text=org.opencontainers.image.source
+  "="  punctuation  —
+  "\"https://github.com/example/app\""  string  argument LABEL value text="https://github.com/example/app"
+  " "  whitespace  —
+  "version"  text  argument LABEL key text=version
+  "="  punctuation  —
+  "1.0"  text  argument LABEL value text=1.0
+line 16  instruction (EXPOSE, start 16, -)
+  "EXPOSE"  keyword  instruction EXPOSE
+  " "  whitespace  —
+  "8000/tcp"  text  argument EXPOSE port text=8000/tcp
+line 17  instruction (USER, start 17, -)
+  "USER"  keyword  instruction USER
+  " "  whitespace  —
+  "1000:1000"  text  argument USER user text=1000:1000
+line 18  instruction (STOPSIGNAL, start 18, -)
+  "STOPSIGNAL"  keyword  instruction STOPSIGNAL
+  " "  whitespace  —
+  "SIGINT"  text  argument STOPSIGNAL signal text=SIGINT
+line 19  instruction (CMD, start 19, shell)
+  "CMD"  keyword  instruction CMD
+  " "  whitespace  —
+  "python"  text  shell CMD command cmd=python [0] text=python
+  " "  whitespace  —
+  "-m"  text  shell CMD option cmd=python [1] text=-m
+  " "  whitespace  —
+  "app"  text  shell CMD argument cmd=python [2] text=app
+  " "  whitespace  —
+  "--port"  text  shell CMD option cmd=python [3] text=--port
+  " "  whitespace  —
+  "\""  string  shell CMD argument cmd=python [4] text="${PORT:-8000}"
+  "${PORT:-8000}"  variable  variable PORT (CMD, shell) text=${PORT:-8000}
+  "\""  string  shell CMD argument cmd=python [4] text="${PORT:-8000}"
+  " "  whitespace  —
+  ">"  operator  shell CMD redirection cmd=python [-1] text=>
+  " "  whitespace  —
+  "/dev/stdout"  text  shell CMD redirect-target cmd=python [-1] text=/dev/stdout
+  " "  whitespace  —
+  "2>&1"  operator  shell CMD redirection cmd=python [-1] text=2>&1
