@@ -147,6 +147,24 @@ describe('App', () => {
       expect(screen.queryByRole('button', { name: /^Back to/ })).toBeNull();
     });
 
+    it("caps the stack at 20 and keeps the token's own entry at the bottom (PNL-36)", async () => {
+      const user = userEvent.setup();
+      render(<App />);
+      const from = token(/^FROM:/);
+      await user.click(from);
+      for (let i = 0; i < 13; i++) {
+        await user.click(screen.getByRole('button', { name: 'COPY --from' }));
+        await user.click(screen.getByRole('button', { name: 'FROM AS' }));
+      }
+      let backs = 0;
+      for (let back; (back = screen.queryByRole('button', { name: /^Back to/ })); backs++) {
+        await user.click(back);
+      }
+      expect(backs).toBe(19);
+      expect(heading()).toHaveAccessibleName('FROM');
+      expect(from).toHaveAttribute('aria-current', 'true');
+    });
+
     it('explains shell options on continuation lines in context', async () => {
       const user = userEvent.setup();
       render(<App />);
@@ -266,6 +284,24 @@ describe('App', () => {
       await user.click(from);
       await user.tab();
       expect(panel()).toContainElement(document.activeElement as HTMLElement);
+    });
+
+    it('lets Tab leave the panel: there is no focus trap (PNL-22)', async () => {
+      const user = userEvent.setup();
+      render(<App />);
+      await user.click(token(/^FROM:/));
+      const links = panel().querySelectorAll('a');
+      links[links.length - 1].focus();
+      await user.tab();
+      expect(document.activeElement).not.toBe(document.body);
+      expect(panel()).not.toContainElement(document.activeElement as HTMLElement);
+    });
+
+    it('moves the tab stop on click even when the click does not focus (Safari)', () => {
+      render(<App />);
+      fireEvent.click(token(/^WORKDIR:/));
+      expect(tabStops()).toHaveLength(1);
+      expect(tabStops()[0]).toHaveTextContent('WORKDIR');
     });
   });
 });

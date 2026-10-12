@@ -216,6 +216,33 @@ Then(
   },
 );
 
+Then(
+  'the last line of the Dockerfile can be scrolled above the explanation panel',
+  async function (this: PuppeteerWorld) {
+    const { lineBottom, sheetTop } = await this.page.evaluate(
+      (viewer, panel) => {
+        const grid = document.querySelector(viewer);
+        const lines = grid?.querySelectorAll('[data-line]') ?? [];
+        const last = lines[lines.length - 1];
+        // Scroll every scrollable ancestor of the last line, then the page, to the end.
+        for (let el = last?.parentElement; el; el = el.parentElement)
+          el.scrollTop = el.scrollHeight;
+        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });
+        return {
+          lineBottom: last?.getBoundingClientRect().bottom ?? Infinity,
+          sheetTop: document.querySelector(panel)?.getBoundingClientRect().top ?? 0,
+        };
+      },
+      VIEWER,
+      PANEL,
+    );
+    assert.ok(
+      lineBottom <= sheetTop,
+      `Expected the last line (bottom ${lineBottom}) above the sheet (top ${sheetTop})`,
+    );
+  },
+);
+
 // ─── Example switcher steps ───────────────────────────────────────────────────
 
 When('I select the {string} example', async function (this: PuppeteerWorld, label: string) {

@@ -212,7 +212,11 @@ function TokenButton({ token, isActive, isTabStop, onSelect, onFocus }: TokenBut
       data-token-id={token.id}
       class={className}
       tabIndex={isTabStop ? 0 : -1}
-      onClick={() => onSelect(token)}
+      onClick={() => {
+        // Safari doesn't focus buttons on click, so move the tab stop here too.
+        onFocus(token.id);
+        onSelect(token);
+      }}
       onFocus={() => onFocus(token.id)}
       title={token.summary}
       aria-label={`${token.text}: ${token.summary}`}

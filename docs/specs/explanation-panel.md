@@ -82,7 +82,7 @@ stateDiagram-v2
 - **PNL-9** Tokens whose ref is `null` (whitespace, comments) are plain text and cannot be selected. Every other token is selectable, because `getExplanation` is total (EXP-12).
 - **PNL-10** Opening the panel does not change the URL or history, and its state is not persisted; on reload it is closed. Deep links (`#<example>/<refKey>`) are a future extension (§9, ARCH §10.2).
 - **PNL-33** **Selection highlight.** A token has the active style and `aria-current="true"` exactly when the panel is open, it is the source token, and the shown entry is its own (stack depth 1). After "See also" the panel explains something else, so no token claims it; Back to depth 1 restores the highlight. Closing clears it.
-- **PNL-36** The stack holds at most 20 entries; pushing more drops the oldest. Following a "See also" link to the entry already shown does nothing.
+- **PNL-36** The stack holds at most 20 entries; pushing more drops the oldest entry above the token's own, so Back always leads home to the token's explanation (and its highlight, PNL-33). Following a "See also" link to the entry already shown does nothing.
 
 ## 4. Content layout
 
