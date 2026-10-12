@@ -10,7 +10,7 @@ Click any part of a Dockerfile (instructions, flags, arguments, variables, shell
 - **Three Dockerfile examples** — Simple, Average, and Complex, switchable at any time
 - **Interactive tokens** — click any highlighted part: keywords (`FROM`, `RUN`, …), flags (`--from`, `--mount`, …), image names, paths, variables, and shell commands, options and operators, explained in context (`-S` in `adduser -S` is explained as an `adduser` option)
 - **Rich explanations** — short summary, details with inline code, syntax reference, "See also" links between related concepts, and links to the official docs
-- **Accessible** — semantic HTML, ARIA attributes, keyboard navigation, focus management, and ESC to close
+- **Accessible** — the Dockerfile is one tab stop with arrow-key navigation, the panel is non-modal and returns focus on close, changes are announced to screen readers, and axe checks run in CI
 - **Responsive** — adapts from desktop side-panel layout to a mobile bottom-sheet
 - **Light + dark modes** — follows the OS preference via `prefers-color-scheme`
 - **Small bundle** — under 40 KB gzipped, built with [Preact](https://preactjs.com/) and [Vite](https://vite.dev/)
@@ -50,7 +50,7 @@ npm test
 The test suite covers:
 
 - **Unit tests** — tokenizer invariants, reference examples and golden fixtures (`tokenizer.test.ts`); explanation content, rich text and generators (`content.test.ts`); command explanations and the command catalog (`commands.test.ts`)
-- **UI tests** — example toggling, panel open/close, Escape key, documentation links, copy button behaviour (`App.test.tsx`, `SidePanel.test.tsx`, `CopyButton.test.tsx`)
+- **UI tests** — example toggling, panel open/close, Escape, focus return, "See also" and Back, viewer keyboard navigation, documentation links, copy button behaviour (`App.test.tsx`, `ExplanationPanel.test.tsx`, `ExplanationContent.test.tsx`, `CopyButton.test.tsx`)
 
 ### Feature tests (end-to-end)
 
@@ -84,15 +84,15 @@ The Cucumber/Puppeteer feature tests navigate a real browser to a running instan
 
 The feature suite currently covers:
 
-| Feature file                      | Scenarios                                                                                        |
-| --------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `browser.feature`                 | Headless browser smoke test                                                                      |
-| `site.feature`                    | Home page loads with the expected title; no Content Security Policy violations                   |
-| `homepage.feature`                | Homepage title, heading, and intro text                                                          |
-| `instruction_explanation.feature` | Clicking an instruction opens the panel; closing; switching; continuation-line command fragments |
-| `example_switcher.feature`        | Default example shown; switching examples; switching closes the panel                            |
-| `reduced_motion.feature`          | No transitions with `prefers-reduced-motion: reduce`; transitions otherwise                      |
-| `accessibility.feature`           | axe-core WCAG 2.2 AA checks in the dark and light colour schemes                                 |
+| Feature file                      | Scenarios                                                                                                               |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `browser.feature`                 | Headless browser smoke test                                                                                             |
+| `site.feature`                    | Home page loads with the expected title; no Content Security Policy violations                                          |
+| `homepage.feature`                | Homepage title, heading, and intro text                                                                                 |
+| `instruction_explanation.feature` | Opening, closing and switching explanations; continuation-line fragments; keyboard-only use; desktop and mobile layouts |
+| `example_switcher.feature`        | Default example shown; switching examples; switching closes the panel                                                   |
+| `reduced_motion.feature`          | No transitions with `prefers-reduced-motion: reduce`; transitions otherwise                                             |
+| `accessibility.feature`           | axe-core WCAG 2.2 AA checks in the dark and light colour schemes                                                        |
 
 ### Lint, format and type-check
 
@@ -146,12 +146,15 @@ web/
 │   ├── components/
 │   │   ├── CopyButton.tsx            Copy-to-clipboard button
 │   │   ├── CopyButton.module.css
-│   │   ├── DockerfileViewer.tsx      Renders tokenized Dockerfile
+│   │   ├── DockerfileViewer.tsx      Tokenized Dockerfile as a keyboard-navigable grid
 │   │   ├── DockerfileViewer.module.css
 │   │   ├── ExampleToggler.tsx        Simple/Average/Complex toggle
 │   │   ├── ExampleToggler.module.css
-│   │   ├── SidePanel.tsx             Explanation side panel
-│   │   └── SidePanel.module.css
+│   │   ├── ExplanationPanel.tsx      Panel shell: open/close, Escape, Back, focus
+│   │   ├── ExplanationPanel.module.css
+│   │   ├── ExplanationContent.tsx    Renders one explanation
+│   │   ├── RichText.tsx              Inline code, paragraphs and lists
+│   │   └── RichText.module.css
 │   ├── data/
 │   │   ├── examples.ts        Three Dockerfile texts
 │   │   ├── tokenizer/         Dockerfile → lines of tokens with explanation refs
@@ -167,7 +170,8 @@ web/
 │       ├── content.test.ts
 │       ├── commands.test.ts
 │       ├── App.test.tsx
-│       ├── SidePanel.test.tsx
+│       ├── ExplanationPanel.test.tsx
+│       ├── ExplanationContent.test.tsx
 │       └── CopyButton.test.tsx
 ```
 

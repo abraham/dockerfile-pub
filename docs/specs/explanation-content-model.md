@@ -4,8 +4,8 @@
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Status**        | Implemented (2026-10-12). The design was rewritten on 2026-10-12 and builds on the tokenizer ([tokenizer.md](./tokenizer.md)) and command explanations ([run-command-explanations.md](./run-command-explanations.md)); §12 records the migration from string keys and a `details` string.          |
 | **Source**        | [web/src/data/content/](../../web/src/data/content/schema.ts) (`schema.ts`, `rich-text.ts`, `registry.ts`, `instructions.ts`, `flags.ts`, `keywords.ts`, `directives.ts`, `arguments.ts`, `variables.ts`); entry point `getExplanation()` in [explanations.ts](../../web/src/data/explanations.ts) |
-| **Rendered by**   | [SidePanel.tsx](../../web/src/components/SidePanel.tsx) (panel), `Token` in [DockerfileViewer.tsx](../../web/src/components/DockerfileViewer.tsx) (tooltip and accessible name)                                                                                                                    |
-| **Tests**         | [web/src/\_\_tests\_\_/content.test.ts](../../web/src/__tests__/content.test.ts); plus [SidePanel.test.tsx](../../web/src/__tests__/SidePanel.test.tsx) for rendering                                                                                                                              |
+| **Rendered by**   | [ExplanationContent.tsx](../../web/src/components/ExplanationContent.tsx) and [RichText.tsx](../../web/src/components/RichText.tsx) (panel), `TokenButton` in [DockerfileViewer.tsx](../../web/src/components/DockerfileViewer.tsx) (tooltip and accessible name)                                  |
+| **Tests**         | [web/src/\_\_tests\_\_/content.test.ts](../../web/src/__tests__/content.test.ts); plus [ExplanationContent.test.tsx](../../web/src/__tests__/ExplanationContent.test.tsx) for rendering                                                                                                            |
 | **Related specs** | [tokenizer.md](./tokenizer.md) (refs, §3.3), [run-command-explanations.md](./run-command-explanations.md) (command fragments), [explanation-panel.md](./explanation-panel.md) (how explanations are shown)                                                                                         |
 
 ## 1. Purpose and scope
@@ -259,7 +259,7 @@ All targets below were reached on 2026-10-12.
 | Builder safety    | Generated content built from values containing `` ` ``, a leading `-` and space, `<img src=x onerror=…>` and newlines renders as literal text, with no extra list, code or HTML element (EXP-5, EXP-31).    |
 | Generators        | §6.1 rows: image references with and without registry, tag and digest; `scratch`; `USER 0`; `EXPOSE 53/udp`; OCI label keys. §6.2: both `expandedBy` values, each modifier, and every known-variable group. |
 | Budgets           | EXP-41 and CMDX-20 (gzip measured in a Node-environment test).                                                                                                                                              |
-| Rendering         | `SidePanel.test.tsx`: `<code>` for inline code, lists only for list blocks, `category`, `deprecated` notice and "See also" rendering, and omitted sections (EXP-7).                                         |
+| Rendering         | `ExplanationContent.test.tsx`: `<code>` for inline code, lists only for list blocks, `category`, `deprecated` notice and "See also" rendering, and omitted sections (EXP-7).                                |
 
 ## 12. Migration from the previous implementation
 

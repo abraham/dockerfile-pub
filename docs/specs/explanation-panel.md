@@ -1,11 +1,11 @@
 # Spec: Explanation panel
 
-|             |                                                                                                                                                                                                                                                                                                                                          |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**  | Target design (rewritten 2026-10-12). Describes the intended implementation. The current code (`SidePanel`) still traps focus, uses `aria-pressed` and `aria-hidden`, and drops focus on close; §11 lists what changes.                                                                                                                  |
-| **Source**  | Today: [SidePanel.tsx](../../web/src/components/SidePanel.tsx), [SidePanel.module.css](../../web/src/components/SidePanel.module.css). Target: `components/ExplanationPanel.tsx`, `ExplanationContent.tsx` and `RichText.tsx` (§2). State in [App.tsx](../../web/src/App.tsx); layout in [App.module.css](../../web/src/App.module.css). |
-| **Tests**   | [SidePanel.test.tsx](../../web/src/__tests__/SidePanel.test.tsx), [App.test.tsx](../../web/src/__tests__/App.test.tsx) › "side panel", [instruction_explanation.feature](../../web/features/instruction_explanation.feature), [accessibility.feature](../../web/features/accessibility.feature)                                          |
-| **Related** | [explanation-content-model.md](./explanation-content-model.md) (what the panel renders), [run-command-explanations.md](./run-command-explanations.md), [site-architecture.md](./site-architecture.md) (state, ARCH-2/3, accessibility ARCH-29)                                                                                           |
+|             |                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**  | Implemented (2026-10-12). The design was rewritten the same day; §11 records the migration from `SidePanel`.                                                                                                                                                                                                                                                                                                                            |
+| **Source**  | [ExplanationPanel.tsx](../../web/src/components/ExplanationPanel.tsx), [ExplanationContent.tsx](../../web/src/components/ExplanationContent.tsx), [RichText.tsx](../../web/src/components/RichText.tsx) and their CSS modules; the viewer keyboard model in [DockerfileViewer.tsx](../../web/src/components/DockerfileViewer.tsx). State in [App.tsx](../../web/src/App.tsx); layout in [App.module.css](../../web/src/App.module.css). |
+| **Tests**   | [ExplanationPanel.test.tsx](../../web/src/__tests__/ExplanationPanel.test.tsx), [ExplanationContent.test.tsx](../../web/src/__tests__/ExplanationContent.test.tsx), [App.test.tsx](../../web/src/__tests__/App.test.tsx) › "explanation panel" and "viewer keyboard", [instruction_explanation.feature](../../web/features/instruction_explanation.feature), [accessibility.feature](../../web/features/accessibility.feature)          |
+| **Related** | [explanation-content-model.md](./explanation-content-model.md) (what the panel renders), [run-command-explanations.md](./run-command-explanations.md), [site-architecture.md](./site-architecture.md) (state, ARCH-2/3, accessibility ARCH-29)                                                                                                                                                                                          |
 
 ## 1. Purpose and principles
 
@@ -215,7 +215,9 @@ Tests identify the panel by `[data-testid="side-panel"]` and read its state from
 
 In jsdom, Preact effects run asynchronously: assert focus with `waitFor`.
 
-## 11. Migration from the current implementation
+## 11. Migration from the previous implementation
+
+The migration below is complete (2026-10-12); it is kept as a record.
 
 ### 11.1 Changes
 

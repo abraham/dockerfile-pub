@@ -1,5 +1,6 @@
 import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
+import type { KeyInput } from 'puppeteer';
 import type { PuppeteerWorld } from '../support/world';
 
 declare global {
@@ -72,53 +73,50 @@ Then('I should see the text {string}', async function (this: PuppeteerWorld, exp
 
 // ─── Instruction explanation steps ────────────────────────────────────────────
 
+const PANEL = '[data-testid="side-panel"]';
+const VIEWER = '[aria-label="Dockerfile source"]';
+
+/** Waits until the panel's `data-state` is `state` (PNL-2). */
+async function waitForPanel(world: PuppeteerWorld, state: 'open' | 'closed') {
+  await world.page.waitForFunction(
+    (selector, expected) =>
+      document.querySelector(selector)?.getAttribute('data-state') === expected,
+    { timeout: 3000 },
+    PANEL,
+    state,
+  );
+}
+
 /** Clicks the first token button in the viewer whose text is exactly `text`. */
 async function clickToken(this: PuppeteerWorld, text: string) {
-  // Interactive tokens are rendered as <button> elements inside the
-  // "Dockerfile source" region. Match by text so the step works regardless of
-  // the explanation wording.
-  const clicked = await this.page.evaluate((tokenText) => {
-    const region = document.querySelector('[aria-label="Dockerfile source"]');
-    if (!region) return false;
-    const btn = [...region.querySelectorAll('button')].find(
-      (b) => b.textContent?.trim() === tokenText,
-    );
-    if (!btn) return false;
-    btn.click();
-    return true;
-  }, text);
-  assert.ok(clicked, `Could not find a clickable "${text}" token in the Dockerfile viewer`);
-  // Allow Preact to re-render
-  await this.page.waitForFunction(
-    () =>
-      document.querySelector('[data-testid="side-panel"]')?.getAttribute('aria-hidden') === 'false',
-    { timeout: 3000 },
+  // Match by text so the step works regardless of the explanation wording.
+  const clicked = await this.page.evaluate(
+    (viewer, tokenText) => {
+      const btn = [...(document.querySelector(viewer)?.querySelectorAll('button') ?? [])].find(
+        (b) => b.textContent?.trim() === tokenText,
+      );
+      btn?.click();
+      return Boolean(btn);
+    },
+    VIEWER,
+    text,
   );
+  assert.ok(clicked, `Could not find a clickable "${text}" token in the Dockerfile viewer`);
+  await waitForPanel(this, 'open');
 }
 
 When('I click the {string} instruction', clickToken);
 When('I click the {string} command fragment', clickToken);
 
 Then('the explanation panel is open', async function (this: PuppeteerWorld) {
-  const ariaHidden = await this.page.$eval('[data-testid="side-panel"]', (el) =>
-    el.getAttribute('aria-hidden'),
-  );
-  assert.equal(
-    ariaHidden,
-    'false',
-    'Expected the explanation panel to be open (aria-hidden="false")',
-  );
+  const state = await this.page.$eval(PANEL, (el) => el.getAttribute('data-state'));
+  assert.equal(state, 'open', 'Expected the explanation panel to be open');
 });
 
 Then('the explanation panel is closed', async function (this: PuppeteerWorld) {
-  const ariaHidden = await this.page.$eval('[data-testid="side-panel"]', (el) =>
-    el.getAttribute('aria-hidden'),
-  );
-  assert.equal(
-    ariaHidden,
-    'true',
-    'Expected the explanation panel to be closed (aria-hidden="true")',
-  );
+  await waitForPanel(this, 'closed');
+  const inert = await this.page.$eval(PANEL, (el) => el.hasAttribute('inert'));
+  assert.ok(inert, 'Expected the closed explanation panel to be inert');
 });
 
 Then(
@@ -136,13 +134,87 @@ Then(
 );
 
 When('I close the explanation panel', async function (this: PuppeteerWorld) {
-  await this.page.click('button[aria-label="Close explanation panel"]');
-  await this.page.waitForFunction(
-    () =>
-      document.querySelector('[data-testid="side-panel"]')?.getAttribute('aria-hidden') === 'true',
-    { timeout: 3000 },
-  );
+  await this.page.click('button[aria-label="Close explanation"]');
+  await waitForPanel(this, 'closed');
 });
+
+When('I press {string}', async function (this: PuppeteerWorld, key: KeyInput) {
+  await this.page.keyboard.press(key);
+});
+
+When('I press Tab until the Dockerfile viewer has focus', async function (this: PuppeteerWorld) {
+  for (let i = 0; i < 20; i++) {
+    await this.page.keyboard.press('Tab');
+    const inViewer = await this.page.evaluate(
+      (viewer) => Boolean(document.activeElement?.closest(viewer)),
+      VIEWER,
+    );
+    if (inViewer) return;
+  }
+  assert.fail('The Dockerfile viewer never received focus');
+});
+
+Then('focus is on the {string} token', async function (this: PuppeteerWorld, text: string) {
+  const focused = await this.page.evaluate(
+    (viewer) =>
+      document.activeElement?.closest(viewer) ? document.activeElement.textContent?.trim() : null,
+    VIEWER,
+  );
+  assert.equal(focused, text, `Expected focus on the "${text}" token`);
+});
+
+Then('focus is inside the explanation panel', async function (this: PuppeteerWorld) {
+  const inside = await this.page.evaluate(
+    (panel) => Boolean(document.activeElement?.closest(panel)),
+    PANEL,
+  );
+  assert.ok(inside, 'Expected focus inside the explanation panel');
+});
+
+Then(
+  'the explanation panel is between {int} and {int} pixels wide',
+  async function (this: PuppeteerWorld, min: number, max: number) {
+    // Let the opening transition finish before measuring.
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    const width = await this.page.$eval(PANEL, (el) => el.getBoundingClientRect().width);
+    assert.ok(width >= min && width <= max, `Expected a width of ${min}-${max}px, got ${width}`);
+  },
+);
+
+Then(
+  'the explanation panel is pinned to the bottom of the viewport',
+  async function (this: PuppeteerWorld) {
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    const { position, bottom, viewport } = await this.page.$eval(PANEL, (el) => ({
+      position: getComputedStyle(el).position,
+      bottom: el.getBoundingClientRect().bottom,
+      viewport: window.innerHeight,
+    }));
+    assert.equal(position, 'fixed');
+    assert.ok(Math.abs(bottom - viewport) <= 1, `Expected the sheet at the bottom, got ${bottom}`);
+  },
+);
+
+Then(
+  'the {string} token is above the explanation panel',
+  async function (this: PuppeteerWorld, text: string) {
+    await this.page.waitForFunction(
+      (viewer, panel, tokenText) => {
+        const btn = [...(document.querySelector(viewer)?.querySelectorAll('button') ?? [])].find(
+          (b) => b.textContent?.trim() === tokenText,
+        );
+        const sheet = document.querySelector(panel);
+        if (!btn || !sheet) return false;
+        const token = btn.getBoundingClientRect();
+        return token.top >= 0 && token.bottom <= sheet.getBoundingClientRect().top;
+      },
+      { timeout: 3000 },
+      VIEWER,
+      PANEL,
+      text,
+    );
+  },
+);
 
 // ─── Example switcher steps ───────────────────────────────────────────────────
 

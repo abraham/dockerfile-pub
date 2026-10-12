@@ -113,6 +113,7 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
+  scroll-padding-bottom: var(--panel-sheet-height, 0);
 }
 
 body {

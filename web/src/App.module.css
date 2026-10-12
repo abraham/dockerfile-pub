@@ -109,10 +109,6 @@
   background: var(--c-surface);
 }
 
-.workspacePanelOpen .viewerSection {
-  flex: 0 0 calc((100% - var(--sp-4)) * 2 / 3);
-}
-
 .viewerHeader {
   display: flex;
   align-items: center;
@@ -176,6 +172,7 @@
   .app {
     height: auto;
     min-height: 100dvh;
+    padding-bottom: var(--panel-sheet-height, 0);
   }
 
   .main {
