@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, it, expect } from 'vitest';
 import { tokenize, TOKEN_TYPE, LINE_TYPE, INSTRUCTIONS } from '../data/tokenizer';
 
@@ -43,13 +44,13 @@ describe('tokenize', () => {
       const [line] = tokenize('FROM node:18-alpine');
       const kwToken = line.tokens.find((t) => t.type === TOKEN_TYPE.KEYWORD);
       expect(kwToken).toBeDefined();
-      expect(kwToken.text).toBe('FROM');
+      expect(kwToken?.text).toBe('FROM');
     });
 
     it('sets explanationKey to the keyword string', () => {
       const [line] = tokenize('RUN npm install');
       const kwToken = line.tokens.find((t) => t.type === TOKEN_TYPE.KEYWORD);
-      expect(kwToken.explanationKey).toBe('RUN');
+      expect(kwToken?.explanationKey).toBe('RUN');
     });
 
     it('sets explanation keys for non-whitespace RUN command fragments', () => {
@@ -57,9 +58,9 @@ describe('tokenize', () => {
       const addgroupToken = line.tokens.find((t) => t.text === 'addgroup');
       const flagToken = line.tokens.find((t) => t.text === '-S');
       const andToken = line.tokens.find((t) => t.text === '&&');
-      expect(addgroupToken.explanationKey).toBe('RUN_CHUNK:addgroup');
-      expect(flagToken.explanationKey).toBe('RUN_CHUNK:-S');
-      expect(andToken.explanationKey).toBe('RUN_CHUNK:&&');
+      expect(addgroupToken?.explanationKey).toBe('RUN_CHUNK:addgroup');
+      expect(flagToken?.explanationKey).toBe('RUN_CHUNK:-S');
+      expect(andToken?.explanationKey).toBe('RUN_CHUNK:&&');
     });
 
     it('recognises all documented INSTRUCTIONS', () => {
@@ -76,15 +77,15 @@ describe('tokenize', () => {
       const [line] = tokenize('COPY --from=builder /app/dist .');
       const flagToken = line.tokens.find((t) => t.type === TOKEN_TYPE.FLAG);
       expect(flagToken).toBeDefined();
-      expect(flagToken.text).toBe('--from=builder');
-      expect(flagToken.explanationKey).toBe('--from');
+      expect(flagToken?.text).toBe('--from=builder');
+      expect(flagToken?.explanationKey).toBe('--from');
     });
 
     it('extracts --mount flag in RUN', () => {
       const [line] = tokenize('RUN --mount=type=cache,target=/root/.npm npm ci');
       const flagToken = line.tokens.find((t) => t.type === TOKEN_TYPE.FLAG);
       expect(flagToken).toBeDefined();
-      expect(flagToken.explanationKey).toBe('--mount');
+      expect(flagToken?.explanationKey).toBe('--mount');
     });
 
     it('extracts multiple HEALTHCHECK flags', () => {
@@ -99,14 +100,14 @@ describe('tokenize', () => {
       const [line] = tokenize('FROM node:${NODE_VERSION}-alpine');
       const varToken = line.tokens.find((t) => t.type === TOKEN_TYPE.VARIABLE);
       expect(varToken).toBeDefined();
-      expect(varToken.text).toBe('${NODE_VERSION}');
+      expect(varToken?.text).toBe('${NODE_VERSION}');
     });
 
     it('extracts $VAR variable syntax', () => {
       const [line] = tokenize('ENV VALUE=$MY_VAR');
       const varToken = line.tokens.find((t) => t.type === TOKEN_TYPE.VARIABLE);
       expect(varToken).toBeDefined();
-      expect(varToken.text).toBe('$MY_VAR');
+      expect(varToken?.text).toBe('$MY_VAR');
     });
   });
 
@@ -129,8 +130,8 @@ describe('tokenize', () => {
       const lines = tokenize('FROM node:18\nRUN npm install');
       const fromKw = lines[0].tokens.find((t) => t.type === TOKEN_TYPE.KEYWORD);
       const runKw = lines[1].tokens.find((t) => t.type === TOKEN_TYPE.KEYWORD);
-      expect(fromKw.id).toMatch(/^0-/);
-      expect(runKw.id).toMatch(/^1-/);
+      expect(fromKw?.id).toMatch(/^0-/);
+      expect(runKw?.id).toMatch(/^1-/);
     });
   });
 
@@ -144,7 +145,7 @@ describe('tokenize', () => {
       const lines = tokenize('    npm ci --omit=dev');
       const flagToken = lines[0].tokens.find((t) => t.type === TOKEN_TYPE.FLAG);
       expect(flagToken).toBeDefined();
-      expect(flagToken.explanationKey).toBe('--omit');
+      expect(flagToken?.explanationKey).toBe('--omit');
     });
   });
 });

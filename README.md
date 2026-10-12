@@ -3,7 +3,7 @@
 An interactive single-page developer tool that explains how Dockerfiles work.
 Click any instruction or flag to see a concise explanation, syntax reference, and links to official Docker documentation.
 
-**[Live demo →](https://abraham.github.io/dockerfile-pub/)**
+**[Live demo →](https://dockerfile.pub/)**
 
 ## Features
 
@@ -19,7 +19,7 @@ Click any instruction or flag to see a concise explanation, syntax reference, an
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 22+ (the version CI uses is in `web/.nvmrc`)
 - npm 10+
 
 ### Install
@@ -48,6 +48,7 @@ npm test
 ```
 
 The test suite covers:
+
 - **Unit tests** — tokenizer / parser and token → explanation mapping (`tokenizer.test.js`)
 - **UI tests** — example toggling, panel open/close, Escape key, documentation links, copy button behaviour (`App.test.jsx`, `SidePanel.test.jsx`, `CopyButton.test.jsx`)
 
@@ -74,34 +75,43 @@ The Cucumber/Puppeteer feature tests navigate a real browser to a running instan
    BASE_URL=https://staging.example.com npm run test:features
 
    # production
-   BASE_URL=https://abraham.github.io/dockerfile-pub npm run test:features
+   BASE_URL=https://dockerfile.pub npm run test:features
    ```
 
    Every scenario that requires the site begins with `Given the site is up`, which performs a quick health-check request to `BASE_URL` before the browser steps run. If the server is not reachable the step fails with a clear error message.
 
+   CI runs the suite against the production build (`npm run build && npm run preview`), and `deploy.yml` runs the `smoke` profile (`npx cucumber-js --profile smoke`) against the live site after each deploy.
+
 The feature suite currently covers:
 
-| Feature file | Scenarios |
-|---|---|
-| `browser.feature` | Headless browser smoke test |
-| `site.feature` | Home page loads with the expected title |
-| `homepage.feature` | Homepage title, heading, and intro text |
-| `instruction_explanation.feature` | Clicking an instruction opens the panel; closing; switching instructions |
-| `example_switcher.feature` | Default example shown; switching examples; switching closes the panel |
+| Feature file                      | Scenarios                                                                      |
+| --------------------------------- | ------------------------------------------------------------------------------ |
+| `browser.feature`                 | Headless browser smoke test                                                    |
+| `site.feature`                    | Home page loads with the expected title; no Content Security Policy violations |
+| `homepage.feature`                | Homepage title, heading, and intro text                                        |
+| `instruction_explanation.feature` | Clicking an instruction opens the panel; closing; switching instructions       |
+| `example_switcher.feature`        | Default example shown; switching examples; switching closes the panel          |
+| `reduced_motion.feature`          | No transitions with `prefers-reduced-motion: reduce`; transitions otherwise    |
+| `accessibility.feature`           | axe-core WCAG 2.2 AA checks in the dark and light colour schemes               |
 
-### Lint
+### Lint, format and type-check
 
 ```bash
-npm run lint
+npm run lint           # ESLint (all JS), Stylelint (CSS), markdownlint (all *.md in the repo)
+npm run format:check   # Prettier over the whole repo; `npm run format` to fix
+npm run typecheck
 ```
+
+Everything except generated files is linted and formatted; see [site-architecture.md §8](./docs/specs/site-architecture.md#8-tooling-and-conventions). CI also lints the workflow files with `actionlint`.
 
 ### Build
 
 ```bash
 npm run build
+npm run size   # fails if the bundle exceeds its budget
 ```
 
-Outputs a static bundle to `web/dist/`. The production build is ~40 KB JS and ~11 KB CSS (both before gzip).
+Outputs a static bundle to `web/dist/`. The production build is ~41 KB JS and ~12 KB CSS before gzip (~15 KB and ~3 KB gzipped). `npm run size` fails if gzipped JS exceeds 20 KB or gzipped CSS exceeds 5 KB.
 
 ### Preview production build
 
@@ -111,16 +121,21 @@ npm run preview
 
 ## Project structure
 
-```
+```text
 web/
 ├── index.html                 Entry HTML
 ├── vite.config.js             Vite + Vitest configuration
+├── jsconfig.json              Type-checking config for JSDoc types
+├── scripts/
+│   └── check-size.js          Bundle-size budget check
 ├── features/
 │   ├── browser.feature        Headless browser smoke test
 │   ├── site.feature           Site navigation smoke test
 │   ├── homepage.feature       Homepage content test
 │   ├── instruction_explanation.feature  Instruction panel tests
 │   ├── example_switcher.feature         Example toggle tests
+│   ├── reduced_motion.feature           Reduced-motion tests
+│   ├── accessibility.feature            axe-core WCAG checks
 │   ├── step_definitions/      Cucumber step implementations
 │   └── support/               World + hooks (browser lifecycle)
 ├── src/
@@ -128,6 +143,8 @@ web/
 │   ├── App.jsx                Root component — state, layout
 │   ├── App.module.css         App-level styles
 │   ├── components/
+│   │   ├── CopyButton.jsx            Copy-to-clipboard button
+│   │   ├── CopyButton.module.css
 │   │   ├── DockerfileViewer.jsx      Renders tokenized Dockerfile
 │   │   ├── DockerfileViewer.module.css
 │   │   ├── ExampleToggler.jsx        Simple/Average/Complex toggle
@@ -150,42 +167,18 @@ web/
 
 ## Architecture overview
 
-### Tokenizer (`src/data/tokenizer.js`)
+A static Preact single-page app with no backend. `App` tokenizes the selected example (`src/data/tokenizer.js`), attaches an explanation to each token (`src/data/explanations.js`), and owns all state. The selected example is persisted to `localStorage` under the key `df-example`.
 
-`tokenize(text)` splits a Dockerfile string into an array of **`Line`** objects. Each line holds an ordered array of **`Token`** objects with fields:
+The specs in [docs/specs/](./docs/specs/) are the source of truth:
 
-| Field | Type | Description |
-|---|---|---|
-| `id` | `string` | Unique id (`"<lineIndex>-<tokenIndex>"`) |
-| `text` | `string` | Raw text of this token |
-| `type` | `TOKEN_TYPE` | `keyword`, `flag`, `string`, `variable`, `comment`, `text` |
-| `explanationKey` | `string \| null` | Lookup key into the explanations map |
-
-### Explanations (`src/data/explanations.js`)
-
-A static map from instruction name (e.g. `"FROM"`) or flag name (e.g. `"--mount"`) to an explanation object:
-
-```js
-{
-  title: string,
-  short: string,    // one-sentence summary shown as tooltip
-  details: string,  // multi-paragraph expanded explanation
-  syntax: string,   // syntax snippet
-  links: [{ label, url }]
-}
-```
-
-### State
-
-All state lives in the top-level `App` component:
-
-| State | Type | Description |
-|---|---|---|
-| `activeExample` | `string` | Currently displayed example key |
-| `activeToken` | `Token \| null` | Selected token (with attached explanation) |
-| `isPanelOpen` | `boolean` | Whether the side panel is visible |
-
-The selected example is persisted to `localStorage` under the key `df-example`.
+| Spec                                                                      | Covers                                                        |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| [site-architecture.md](./docs/specs/site-architecture.md)                 | Layers, state, styling, build, testing, hosting, decision log |
+| [tokenizer.md](./docs/specs/tokenizer.md)                                 | `Line` / `Token` model and tokenization rules                 |
+| [explanation-content-model.md](./docs/specs/explanation-content-model.md) | Explanation schema, keys and authoring rules                  |
+| [run-command-explanations.md](./docs/specs/run-command-explanations.md)   | Generated explanations for `RUN` command fragments            |
+| [explanation-panel.md](./docs/specs/explanation-panel.md)                 | Panel behaviour, layout, keyboard and accessibility           |
+| [github-workflows.md](./docs/specs/github-workflows.md)                   | CI, deploy and Dependabot                                     |
 
 ## Contributing
 

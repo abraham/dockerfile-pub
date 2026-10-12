@@ -1,0 +1,4 @@
+{
+  // Prettier owns formatting; prose is not hard-wrapped.
+  "MD013": false,
+}

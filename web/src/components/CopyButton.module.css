@@ -8,7 +8,9 @@
   border: 1px solid var(--c-border);
   border-radius: var(--r-md);
   cursor: pointer;
-  transition: color var(--transition-fast), border-color var(--transition-fast),
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast),
     background var(--transition-fast);
   line-height: 1;
 }

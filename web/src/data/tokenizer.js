@@ -106,17 +106,33 @@ function parseLine(raw, lineIndex) {
   if (keywordMatch && INSTRUCTIONS.has(keywordMatch[1])) {
     const keyword = keywordMatch[1];
     const rest = keywordMatch[2];
-    const indent = raw.match(/^(\s*)/)[1];
+    const indent = raw.slice(0, raw.length - trimmed.length);
 
     let tokenIndex = 0;
     const tokens = [];
 
     if (indent) {
-      tokens.push(makeToken(`${lineIndex}-${tokenIndex}`, indent, TOKEN_TYPE.TEXT, lineIndex, tokenIndex++, null));
+      tokens.push(
+        makeToken(
+          `${lineIndex}-${tokenIndex}`,
+          indent,
+          TOKEN_TYPE.TEXT,
+          lineIndex,
+          tokenIndex++,
+          null,
+        ),
+      );
     }
 
     tokens.push(
-      makeToken(`${lineIndex}-${tokenIndex}`, keyword, TOKEN_TYPE.KEYWORD, lineIndex, tokenIndex++, keyword),
+      makeToken(
+        `${lineIndex}-${tokenIndex}`,
+        keyword,
+        TOKEN_TYPE.KEYWORD,
+        lineIndex,
+        tokenIndex++,
+        keyword,
+      ),
     );
 
     const restTokens = tokenizeArgs(rest, lineIndex, tokenIndex, keyword);
@@ -150,7 +166,9 @@ function tokenizeArgs(text, lineIndex, startIndex, instructionKeyword) {
       const flagText = flagMatch[1];
       // Extract just the flag name without value for the explanation key
       const flagKey = flagText.split('=')[0];
-      tokens.push(makeToken(`${lineIndex}-${idx}`, flagText, TOKEN_TYPE.FLAG, lineIndex, idx++, flagKey));
+      tokens.push(
+        makeToken(`${lineIndex}-${idx}`, flagText, TOKEN_TYPE.FLAG, lineIndex, idx++, flagKey),
+      );
       remaining = remaining.slice(flagText.length);
       continue;
     }
@@ -198,6 +216,11 @@ function tokenizeArgs(text, lineIndex, startIndex, instructionKeyword) {
   return tokens;
 }
 
+/**
+ * @param {string} chunkText
+ * @param {string|null} instructionKeyword
+ * @returns {string|null}
+ */
 function getChunkExplanationKey(chunkText, instructionKeyword) {
   if (instructionKeyword !== 'RUN') return null;
   if (!chunkText.trim()) return null;
@@ -206,6 +229,13 @@ function getChunkExplanationKey(chunkText, instructionKeyword) {
 
 /**
  * Factory helper to create a Token object.
+ * @param {string} id
+ * @param {string} text
+ * @param {string} type
+ * @param {number} lineIndex
+ * @param {number} tokenIndex
+ * @param {string|null} explanationKey
+ * @returns {Token}
  */
 function makeToken(id, text, type, lineIndex, tokenIndex, explanationKey) {
   return { id, text, type, lineIndex, tokenIndex, explanationKey };

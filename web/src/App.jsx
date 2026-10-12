@@ -8,6 +8,8 @@ import { EXAMPLES } from './data/examples';
 import { getExplanation } from './data/explanations';
 import styles from './App.module.css';
 
+/** @typedef {import('./components/DockerfileViewer').ResolvedToken} ResolvedToken */
+
 const EXAMPLE_KEYS = Object.keys(EXAMPLES);
 
 function loadSavedExample() {
@@ -22,15 +24,24 @@ function loadSavedExample() {
 
 export function App() {
   const [activeExample, setActiveExample] = useState(loadSavedExample);
-  const [activeToken, setActiveToken] = useState(null);
+  const [activeToken, setActiveToken] = useState(/** @type {ResolvedToken | null} */ (null));
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
-  const lines = useMemo(() => tokenize(EXAMPLES[activeExample].content), [activeExample]);
+  const lines = useMemo(
+    () =>
+      tokenize(EXAMPLES[activeExample].content).map((line) => ({
+        ...line,
+        tokens: line.tokens.map((token) => ({
+          ...token,
+          explanation: getExplanation(token.explanationKey),
+        })),
+      })),
+    [activeExample],
+  );
 
-  const handleTokenClick = useCallback((token) => {
-    const explanation = getExplanation(token.explanationKey);
-    if (!explanation) return;
-    setActiveToken({ ...token, explanation });
+  const handleTokenClick = useCallback((/** @type {ResolvedToken} */ token) => {
+    if (!token.explanation) return;
+    setActiveToken(token);
     setIsPanelOpen(true);
   }, []);
 
@@ -38,7 +49,7 @@ export function App() {
     setIsPanelOpen(false);
   }, []);
 
-  const handleExampleChange = useCallback((key) => {
+  const handleExampleChange = useCallback((/** @type {string} */ key) => {
     setActiveExample(key);
     setIsPanelOpen(false);
     setActiveToken(null);
@@ -64,7 +75,9 @@ export function App() {
             </span>
             <div>
               <h1 class={styles.brandTitle}>Dockerfile Explainer</h1>
-              <p class={styles.brandTagline}>Click any highlighted instruction to learn what it does</p>
+              <p class={styles.brandTagline}>
+                Click any highlighted instruction to learn what it does
+              </p>
             </div>
           </div>
         </div>
@@ -73,7 +86,11 @@ export function App() {
       <main class={styles.main}>
         <div class={styles.toolbar}>
           <div class={styles.toolbarLeft}>
-            <ExampleToggler value={activeExample} onChange={handleExampleChange} examples={exampleList} />
+            <ExampleToggler
+              value={activeExample}
+              onChange={handleExampleChange}
+              examples={exampleList}
+            />
             <span class={styles.exampleDesc}>{EXAMPLES[activeExample].description}</span>
           </div>
           <span class={styles.hint} aria-live="polite">
@@ -92,7 +109,7 @@ export function App() {
             </div>
             <DockerfileViewer
               lines={lines}
-              activeTokenId={activeToken?.id}
+              activeTokenId={activeToken?.id ?? null}
               onTokenClick={handleTokenClick}
             />
           </section>

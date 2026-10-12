@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'preact/hooks';
 import styles from './SidePanel.module.css';
 
+/** @param {string} block */
 function isListDetailBlock(block) {
   const lines = block
     .split('\n')
@@ -12,6 +13,10 @@ function isListDetailBlock(block) {
   return lines.every((line) => /^([-*]\s+.+)|(.+\s[—–-]\s.+)$/.test(line));
 }
 
+/**
+ * @param {string} block
+ * @param {number} key
+ */
 function renderDetailBlock(block, key) {
   if (!isListDetailBlock(block)) {
     return (
@@ -41,14 +46,14 @@ function renderDetailBlock(block, key) {
  * Side panel that displays an explanation for the selected token.
  *
  * @param {{
- *   token: (import('../data/tokenizer').Token & { explanation: import('../data/explanations').Explanation }) | null,
+ *   token: import('./DockerfileViewer').ResolvedToken | null,
  *   isOpen: boolean,
  *   onClose: () => void
  * }} props
  */
 export function SidePanel({ token, isOpen, onClose }) {
-  const panelRef = useRef(null);
-  const closeButtonRef = useRef(null);
+  const panelRef = useRef(/** @type {HTMLElement | null} */ (null));
+  const closeButtonRef = useRef(/** @type {HTMLButtonElement | null} */ (null));
 
   // Focus the close button when the panel opens
   useEffect(() => {
@@ -60,6 +65,7 @@ export function SidePanel({ token, isOpen, onClose }) {
   // Close on Escape key
   useEffect(() => {
     if (!isOpen) return;
+    /** @param {KeyboardEvent} e */
     function handleKeyDown(e) {
       if (e.key === 'Escape') {
         onClose();
@@ -73,11 +79,12 @@ export function SidePanel({ token, isOpen, onClose }) {
   useEffect(() => {
     if (!isOpen || !panelRef.current) return;
     const panel = panelRef.current;
+    /** @param {KeyboardEvent} e */
     function handleKeyDown(e) {
       if (e.key !== 'Tab') return;
-      const focusable = Array.from(
-        panel.querySelectorAll('a, button, [tabindex]:not([tabindex="-1"])'),
-      ).filter((el) => !el.disabled);
+      /** @type {NodeListOf<HTMLElement>} */
+      const candidates = panel.querySelectorAll('a, button, [tabindex]:not([tabindex="-1"])');
+      const focusable = Array.from(candidates).filter((el) => !el.hasAttribute('disabled'));
       if (focusable.length === 0) return;
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
@@ -159,7 +166,7 @@ export function SidePanel({ token, isOpen, onClose }) {
             {explanation.syntax && (
               <div class={styles.section}>
                 <h3 class={styles.sectionTitle}>Syntax</h3>
-                <pre class={styles.syntaxBlock}>
+                <pre class={styles.syntaxBlock} tabIndex={0} role="region" aria-label="Syntax">
                   <code>{explanation.syntax}</code>
                 </pre>
               </div>

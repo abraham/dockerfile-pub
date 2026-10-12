@@ -1,6 +1,5 @@
 @browser
 Feature: Example switcher
-
   Users can switch between three built-in Dockerfile examples (Simple, Average,
   Complex) using the toggle group above the viewer.
 
