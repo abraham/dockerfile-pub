@@ -1,16 +1,18 @@
 import { Given, Then } from '@cucumber/cucumber';
 import { AxePuppeteer } from '@axe-core/puppeteer';
 import assert from 'node:assert/strict';
+import type { Page } from 'puppeteer';
+import type { PuppeteerWorld } from '../support/world';
 
-const ANIMATED_SELECTORS = {
+const ANIMATED_SELECTORS: Record<string, string> = {
   'explanation panel': '[data-testid="side-panel"]',
   'example indicator':
     '[role="group"][aria-label="Select Dockerfile example"] > [aria-hidden="true"]',
 };
 
-async function transitionDurations(page) {
+async function transitionDurations(page: Page): Promise<Record<string, number[] | null>> {
   return page.evaluate((selectors) => {
-    const result = {};
+    const result: Record<string, number[] | null> = {};
     for (const [name, selector] of Object.entries(selectors)) {
       const el = document.querySelector(selector);
       result[name] = el
@@ -23,19 +25,22 @@ async function transitionDurations(page) {
   }, ANIMATED_SELECTORS);
 }
 
-Given('the user prefers reduced motion', async function () {
+Given('the user prefers reduced motion', async function (this: PuppeteerWorld) {
   await this.page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
 });
 
-Given('the user prefers the {string} colour scheme', async function (scheme) {
-  await this.page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: scheme }]);
-});
+Given(
+  'the user prefers the {string} colour scheme',
+  async function (this: PuppeteerWorld, scheme: string) {
+    await this.page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: scheme }]);
+  },
+);
 
 const WCAG_AA_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 // Code tokens are inline targets constrained by the code's line height (WCAG 2.5.8 inline exception, ARCH-29).
 const INLINE_TARGETS = '[aria-label="Dockerfile source"]';
 
-Then('the page has no WCAG AA accessibility violations', async function () {
+Then('the page has no WCAG AA accessibility violations', async function (this: PuppeteerWorld) {
   // Let the panel finish its open transition so axe measures final colours.
   await new Promise((resolve) => setTimeout(resolve, 400));
   const general = await new AxePuppeteer(this.page)
@@ -57,18 +62,21 @@ Then('the page has no WCAG AA accessibility violations', async function () {
   assert.equal(violations.length, 0, `Accessibility violations:\n  ${summary.join('\n  ')}`);
 });
 
-Then('the explanation panel and example indicator do not animate', async function () {
-  const durations = await transitionDurations(this.page);
-  for (const [name, values] of Object.entries(durations)) {
-    assert.ok(values, `Could not find the ${name}`);
-    assert.ok(
-      values.every((v) => v === 0),
-      `Expected the ${name} to have no transition, got ${values.join(', ')}s`,
-    );
-  }
-});
+Then(
+  'the explanation panel and example indicator do not animate',
+  async function (this: PuppeteerWorld) {
+    const durations = await transitionDurations(this.page);
+    for (const [name, values] of Object.entries(durations)) {
+      assert.ok(values, `Could not find the ${name}`);
+      assert.ok(
+        values.every((v) => v === 0),
+        `Expected the ${name} to have no transition, got ${values.join(', ')}s`,
+      );
+    }
+  },
+);
 
-Then('the explanation panel and example indicator animate', async function () {
+Then('the explanation panel and example indicator animate', async function (this: PuppeteerWorld) {
   const durations = await transitionDurations(this.page);
   for (const [name, values] of Object.entries(durations)) {
     assert.ok(values, `Could not find the ${name}`);

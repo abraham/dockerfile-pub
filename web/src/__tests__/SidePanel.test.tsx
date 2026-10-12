@@ -2,21 +2,25 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/preact';
 import userEvent from '@testing-library/user-event';
 import { SidePanel } from '../components/SidePanel';
+import type { ResolvedToken } from '../components/DockerfileViewer';
+import type { Explanation } from '../data/explanations';
 
-const mockToken = {
+const mockExplanation: Explanation = {
+  title: 'FROM',
+  short: 'Sets the base image.',
+  details: 'Detail line one.\n\nDetail line two.',
+  syntax: 'FROM <image>[:<tag>]',
+  links: [{ label: 'FROM reference', url: 'https://docs.docker.com/reference/dockerfile/#from' }],
+};
+
+const mockToken: ResolvedToken = {
   id: '0-1',
   text: 'FROM',
   type: 'keyword',
   lineIndex: 0,
   tokenIndex: 1,
   explanationKey: 'FROM',
-  explanation: {
-    title: 'FROM',
-    short: 'Sets the base image.',
-    details: 'Detail line one.\n\nDetail line two.',
-    syntax: 'FROM <image>[:<tag>]',
-    links: [{ label: 'FROM reference', url: 'https://docs.docker.com/reference/dockerfile/#from' }],
-  },
+  explanation: mockExplanation,
 };
 
 describe('SidePanel', () => {
@@ -49,10 +53,10 @@ describe('SidePanel', () => {
   });
 
   it('renders newline-separated mount type details as a list', () => {
-    const mountToken = {
+    const mountToken: ResolvedToken = {
       ...mockToken,
       explanation: {
-        ...mockToken.explanation,
+        ...mockExplanation,
         details:
           'type=cache — mounts a persistent cache directory.\n' +
           'type=secret — exposes a secret.\n' +
@@ -65,7 +69,7 @@ describe('SidePanel', () => {
     const firstItem = screen.getByText(/type=cache — mounts a persistent cache directory\./i);
     const list = firstItem.closest('ul');
     expect(list).toBeInTheDocument();
-    expect(within(/** @type {HTMLElement} */ (list)).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(list as HTMLElement).getAllByRole('listitem')).toHaveLength(3);
   });
 
   it('renders the syntax block', () => {

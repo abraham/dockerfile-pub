@@ -1,4 +1,5 @@
-import { defineConfig } from 'vite';
+/// <reference types="vitest/config" />
+import { defineConfig, type Plugin } from 'vite';
 import preact from '@preact/preset-vite';
 
 const CONTENT_SECURITY_POLICY = [
@@ -12,7 +13,7 @@ const CONTENT_SECURITY_POLICY = [
 ].join('; ');
 
 // Build-only: the dev server injects inline scripts for HMR that this policy would block (ARCH-24).
-const contentSecurityPolicy = {
+const contentSecurityPolicy: Plugin = {
   name: 'content-security-policy',
   apply: 'build',
   transformIndexHtml: () => [
@@ -29,7 +30,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: './src/__tests__/setup.js',
+    setupFiles: './src/__tests__/setup.ts',
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],

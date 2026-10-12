@@ -3,8 +3,8 @@
 |             |                                                                                                                                                                                                                                       |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Status**  | Draft. Documents current behaviour. Deviations and open questions are flagged inline.                                                                                                                                                 |
-| **Source**  | [SidePanel.jsx](../../web/src/components/SidePanel.jsx), [SidePanel.module.css](../../web/src/components/SidePanel.module.css); state and layout in [App.jsx](../../web/src/App.jsx) / [App.module.css](../../web/src/App.module.css) |
-| **Tests**   | [SidePanel.test.jsx](../../web/src/__tests__/SidePanel.test.jsx), [App.test.jsx](../../web/src/__tests__/App.test.jsx) › "side panel", [instruction_explanation.feature](../../web/features/instruction_explanation.feature)          |
+| **Source**  | [SidePanel.tsx](../../web/src/components/SidePanel.tsx), [SidePanel.module.css](../../web/src/components/SidePanel.module.css); state and layout in [App.tsx](../../web/src/App.tsx) / [App.module.css](../../web/src/App.module.css) |
+| **Tests**   | [SidePanel.test.tsx](../../web/src/__tests__/SidePanel.test.tsx), [App.test.tsx](../../web/src/__tests__/App.test.tsx) › "side panel", [instruction_explanation.feature](../../web/features/instruction_explanation.feature)          |
 | **Related** | [explanation-content-model.md](./explanation-content-model.md) (what the panel renders), [run-command-explanations.md](./run-command-explanations.md)                                                                                 |
 
 ## 1. Purpose
@@ -142,7 +142,7 @@ The toolbar hint "Click a keyword, flag, or command fragment to explore" is an `
 
 ## 9. Testing contract
 
-Tests decide whether the panel is open or closed only by reading the `aria-hidden` attribute on `[data-testid="side-panel"]`. The title is read from `[data-testid="side-panel"] h2 code`, and the close button is found by `aria-label="Close explanation panel"`. If §8.1 or §8.2 changes these attributes, the Cucumber steps in [site.steps.js](../../web/features/step_definitions/site.steps.js) must change in the same PR.
+Tests decide whether the panel is open or closed only by reading the `aria-hidden` attribute on `[data-testid="side-panel"]`. The title is read from `[data-testid="side-panel"] h2 code`, and the close button is found by `aria-label="Close explanation panel"`. If §8.1 or §8.2 changes these attributes, the Cucumber steps in [site.steps.ts](../../web/features/step_definitions/site.steps.ts) must change in the same PR.
 
 | Rule                                  | Unit                                        | E2E                             | What to add                                                                                                                                                                                     |
 | ------------------------------------- | ------------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
