@@ -1,10 +1,9 @@
 import { useCallback, useRef, useState } from 'preact/hooks';
-import type { LanguageModelStatic } from '../ai/types';
 import type { RewriteDialog as RewriteDialogComponent } from './RewriteDialog';
 import styles from './RewriteButton.module.css';
 
 interface RewriteButtonProps {
-  model: LanguageModelStatic;
+  model: typeof LanguageModel;
   dockerfile: string;
   onApply: (dockerfile: string, request: string) => void;
   onClose: () => void;

@@ -3,7 +3,6 @@ import type { JSX } from 'preact';
 import { RewriteError, rewriteDockerfile } from '../ai/language-model';
 import type { RewriteErrorCode } from '../ai/language-model';
 import { SESSION_OPTIONS } from '../ai/support';
-import type { Availability, LanguageModelStatic } from '../ai/types';
 import { diffLines } from '../data/rewrite/diff';
 import { REQUEST_MAX_LENGTH } from '../data/rewrite/prompt';
 import type { RewriteResult } from '../data/rewrite/validate';
@@ -52,7 +51,7 @@ function statusText(phase: Phase): string {
 }
 
 export interface RewriteDialogProps {
-  model: LanguageModelStatic;
+  model: typeof LanguageModel;
   dockerfile: string;
   onApply: (dockerfile: string, request: string) => void;
   onClose: () => void;
