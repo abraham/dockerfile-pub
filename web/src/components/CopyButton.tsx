@@ -13,7 +13,7 @@ const LABELS: Record<CopyStatus, { text: string; ariaLabel: string }> = {
  * A button that copies the given text to the clipboard.
  * Shows a brief "Copied!" or "Copy failed" message that auto-reverts after 2 seconds.
  */
-export function CopyButton({ text }: { text: string }) {
+export function CopyButton({ text, className }: { text: string; className?: string }) {
   const [status, setStatus] = useState<CopyStatus>('idle');
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -38,7 +38,12 @@ export function CopyButton({ text }: { text: string }) {
   const label = LABELS[status];
 
   return (
-    <button type="button" class={styles.button} onClick={handleClick} aria-label={label.ariaLabel}>
+    <button
+      type="button"
+      class={className ?? styles.button}
+      onClick={handleClick}
+      aria-label={label.ariaLabel}
+    >
       {label.text}
     </button>
   );

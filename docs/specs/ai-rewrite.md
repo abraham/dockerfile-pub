@@ -1,12 +1,12 @@
 # Spec: Rewrite with on-device AI
 
-|                   |                                                                                                                                                                                                                                                                             |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**        | Proposed (2026-10-12). Not implemented.                                                                                                                                                                                                                                     |
-| **Source**        | To be added: `web/src/ai/` (browser glue for the Prompt API), `web/src/data/rewrite/` (pure prompt building and output validation), `web/src/components/RewriteButton.tsx` and `RewriteDialog.tsx` (§4).                                                                    |
-| **Tests**         | To be added: `web/src/__tests__/rewrite.test.ts` (pure logic), `RewriteDialog.test.tsx`, `App.test.tsx` › "rewrite", and `features/rewrite.feature` (§11).                                                                                                                  |
-| **Related specs** | [site-architecture.md](./site-architecture.md) (ARCH-14, ARCH-15, ARCH-24, §10.3), [tokenizer.md](./tokenizer.md) (P1, P2: untrusted input), [explanation-content-model.md](./explanation-content-model.md) (EXP-5, EXP-32), [explanation-panel.md](./explanation-panel.md) |
-| **Platform docs** | [Get started with built-in AI](https://developer.chrome.com/docs/ai/get-started), [Prompt API](https://developer.chrome.com/docs/ai/prompt-api), [Inform users of model download](https://developer.chrome.com/docs/ai/inform-users-of-model-download)                      |
+|                   |                                                                                                                                                                                                                                                                                                                                                                         |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**        | Implemented (2026-10-12).                                                                                                                                                                                                                                                                                                                                               |
+| **Source**        | [ai/](../../web/src/ai/) (`types.ts`, `support.ts`, `language-model.ts`), [data/rewrite/](../../web/src/data/rewrite/) (`prompt.ts`, `validate.ts`, `diff.ts`), [RewriteButton.tsx](../../web/src/components/RewriteButton.tsx), [RewriteDialog.tsx](../../web/src/components/RewriteDialog.tsx) and their CSS modules; state in [App.tsx](../../web/src/App.tsx) (§4). |
+| **Tests**         | [rewrite.test.ts](../../web/src/__tests__/rewrite.test.ts), [RewriteDialog.test.tsx](../../web/src/__tests__/RewriteDialog.test.tsx), [App.test.tsx](../../web/src/__tests__/App.test.tsx) › "rewrite", [rewrite.feature](../../web/features/rewrite.feature); the fake model is [fake-language-model.ts](../../web/src/__tests__/fake-language-model.ts) (§11).        |
+| **Related specs** | [site-architecture.md](./site-architecture.md) (ARCH-14, ARCH-15, ARCH-24, §10.3), [tokenizer.md](./tokenizer.md) (P1, P2: untrusted input), [explanation-content-model.md](./explanation-content-model.md) (EXP-5, EXP-32), [explanation-panel.md](./explanation-panel.md)                                                                                             |
+| **Platform docs** | [Get started with built-in AI](https://developer.chrome.com/docs/ai/get-started), [Prompt API](https://developer.chrome.com/docs/ai/prompt-api), [Inform users of model download](https://developer.chrome.com/docs/ai/inform-users-of-model-download)                                                                                                                  |
 
 ## 1. Purpose and principles
 
@@ -54,24 +54,25 @@ flowchart TD
 
 - **AIR-7** **Support check.** After first render, `App` runs the check once: feature-detect `LanguageModel` on `window`, then call `availability()` with the session options (AIR-14). The check is a few lines in the main bundle; it never creates a session and never starts a download.
 - **AIR-8** **Absent, not disabled.** The Rewrite button is rendered only when the result is `downloadable`, `downloading` or `available`. Otherwise it is **not rendered at all**: a disabled control that can never become enabled on that device is noise for the many users of other browsers. Nothing else in the UI mentions the feature.
-- **AIR-9** The check runs again when the dialog opens and after a download finishes, because Chrome can remove the model when free disk space drops below 10 GB. If it becomes `unavailable` while the dialog is open, the dialog shows the "no longer available" error (§7) and the button disappears when the dialog closes.
+- **AIR-9** The dialog checks again when it opens, and `App` repeats the support check when the dialog closes, because Chrome can remove the model when free disk space drops below 10 GB. If it is `unavailable` when the dialog opens, the dialog shows the "isn't available" error (§7) and the button disappears when the dialog closes.
 - **AIR-10** Before first render nothing is shown, so the button can appear a moment after the page loads. It sits at the end of the viewer header, after the copy button, so its appearance shifts no other control.
 
 ## 4. Architecture
 
-| Module                         | Layer      | Responsibility                                                                                                                                                            |
-| ------------------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ai/support.ts`                | Browser    | AIR-7 check. Tiny and in the main bundle.                                                                                                                                 |
-| `ai/language-model.ts`         | Browser    | Minimal local type declarations for the parts of `LanguageModel` used here (no new dependency), session creation with download monitoring, prompting, error mapping (§7). |
-| `data/rewrite/prompt.ts`       | Data, pure | The system prompt, the user message builder and the JSON Schema (§6).                                                                                                     |
-| `data/rewrite/validate.ts`     | Data, pure | Parses the model's JSON and validates the Dockerfile with the tokenizer (AIR-22). Node-tested (ARCH-17).                                                                  |
-| `data/rewrite/diff.ts`         | Data, pure | Line diff between the current and rewritten Dockerfile, for the review view (AIR-25).                                                                                     |
-| `components/RewriteButton.tsx` | UI         | The header button. On click, loads the dialog chunk and opens it.                                                                                                         |
-| `components/RewriteDialog.tsx` | UI         | The dialog (§5): request, download progress, generation, review, apply.                                                                                                   |
+| Module                         | Layer      | Responsibility                                                                                                                                                          |
+| ------------------------------ | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ai/types.ts`                  | Browser    | Minimal local type declarations for the parts of `LanguageModel` used here (no new dependency).                                                                         |
+| `ai/support.ts`                | Browser    | `SESSION_OPTIONS` (AIR-14) and `findLanguageModel()`, the AIR-7 check. Tiny and in the main bundle.                                                                     |
+| `ai/language-model.ts`         | Browser    | `rewriteDockerfile()`: the base session with download monitoring (AIR-15, AIR-17), context check, prompting, validation and error mapping to `RewriteError` codes (§7). |
+| `data/rewrite/prompt.ts`       | Data, pure | The system prompt, the user message builder and the JSON Schema (§6).                                                                                                   |
+| `data/rewrite/validate.ts`     | Data, pure | Parses the model's JSON and validates the Dockerfile with the tokenizer (AIR-22). Node-tested (ARCH-17).                                                                |
+| `data/rewrite/diff.ts`         | Data, pure | Line diff between the current and rewritten Dockerfile, for the review view (AIR-25).                                                                                   |
+| `components/RewriteButton.tsx` | UI         | The header button. On click, loads the dialog chunk and opens it.                                                                                                       |
+| `components/RewriteDialog.tsx` | UI         | The dialog (§5): request, download progress, generation, review, apply.                                                                                                 |
 
-- **AIR-11** **Layering.** Only `ai/*` touches `LanguageModel`, `window` or `navigator`; it is outside `src/data/`, so the data-layer guard (ARCH-1) still holds. `data/rewrite/*` is pure and has no knowledge of the API. Components receive the AI client through props, so tests pass a fake (§11).
-- **AIR-12** **Lazy chunk.** `RewriteDialog`, `ai/language-model.ts` and `data/rewrite/*` load with a dynamic `import()` on the first click of the Rewrite button. This is a deliberate exception to ARCH-14 ("no lazy loading"): it costs nothing for users who don't have or don't use the feature (P5). Explanations stay in the main bundle and synchronous.
-- **AIR-13** **Budgets.** `scripts/check-size.ts` budgets the entry chunk and lazy chunks separately: the main entry keeps the ARCH-15 budget (40 KB gzipped; this feature may add at most 0.5 KB to it), and the rewrite chunk has its own budget of **8 KB gzipped**.
+- **AIR-11** **Layering.** Only `ai/*` touches `LanguageModel`, `window` or `navigator`; it is outside `src/data/`, so the data-layer guard (ARCH-1) still holds. `data/rewrite/*` is pure and has no knowledge of the API. `App` passes the `LanguageModel` object found by the support check down as the `model` prop, so tests pass a fake (§11).
+- **AIR-12** **Lazy chunk.** `RewriteDialog`, `ai/language-model.ts` and `data/rewrite/*` load with a dynamic `import()` on the first click of the Rewrite button. This is a deliberate exception to ARCH-14 ("no lazy loading"): it costs nothing for users who don't have or don't use the feature (P5). Explanations stay in the main bundle and synchronous. If the chunk fails to load (offline, or a deploy replaced it), the button reads "Rewrite couldn't load" and the next click retries (ARCH-28).
+- **AIR-13** **Budgets.** `scripts/check-size.ts` budgets the entry chunk and lazy chunks separately: the main entry keeps the ARCH-15 budget (40 KB gzipped), and each lazy chunk has its own budget of **8 KB gzipped**. Measured 2026-10-12: the feature adds 1.0 kB gzipped to the entry, mostly Vite's dynamic-import helper; the `RewriteDialog` chunk is 4.4 kB gzipped plus 1.1 kB of CSS. Vite's module-preload polyfill is turned off (`build.modulePreload.polyfill: false`): the lazy chunk depends only on the entry, so there is nothing to preload.
 
 ### 4.1 Session options
 
@@ -98,7 +99,7 @@ The dialog is a native `<dialog>` opened with `showModal()`. Unlike the explanat
 
 - **AIR-17** **Download.** If `availability()` returned `downloadable` or `downloading`, pressing **Rewrite** calls `create()` inside the click handler, so user activation is present (AIR-3), and the Downloading state shows progress from the `monitor`. When `loaded` reaches 1, the progress bar becomes indeterminate ("Preparing the model…") while Chrome extracts and loads the model. The dialog never starts a download on its own, and never before the user presses **Rewrite**.
 - **AIR-18** The dialog has no `<form>` submission. The production CSP has `form-action 'none'` (ARCH-24), so buttons handle `click` (and Ctrl/Cmd+Enter in the textarea) directly.
-- **AIR-19** **One request at a time.** While downloading or generating, **Rewrite** is disabled and the textarea is read-only.
+- **AIR-19** **One request at a time.** While downloading or generating, **Rewrite** is disabled and the textarea is read-only. While generating, the same button becomes **Stop**, so keyboard focus stays on it.
 - **AIR-20** **Stop and cancel.** Stop, Cancel, Escape and closing the dialog abort the request through its `AbortController` and destroy the cloned session. An aborted request shows nothing, not an error.
 
 ### 5.3 Applying the result
@@ -155,9 +156,9 @@ The dialog is a native `<dialog>` opened with `showModal()`. Unlike the explanat
 
 ## 8. Accessibility
 
-- **AIR-28** The dialog is labelled by its heading, and the textarea by its visible label. The state text (Downloading, Rewriting…, Review, errors) is announced through the page's single status region (PNL-25) rather than a second live region; the download `<progress>` has an accessible name and value.
-- **AIR-29** On entering Review or Error, focus moves to that state's heading (`tabIndex={-1}`), so keyboard and screen reader users land on the result.
-- **AIR-30** The diff is readable without colour: each line starts with `+`, `-` or a space, and the diff region has `aria-label` "Changes to the Dockerfile" and is focusable for scrolling (axe `scrollable-region-focusable`).
+- **AIR-28** The dialog is labelled by its heading and described by the on-device note, and the textarea is labelled by its visible label. The state text (Downloading, Preparing, Rewriting…, Review, errors) is announced through a visually hidden `role="status"` region **inside the dialog**: a modal dialog makes the rest of the page inert, which hides the page's status region (PNL-25) from assistive technology. Progress ticks are not announced, only state changes. Both `<progress>` elements have accessible names.
+- **AIR-29** On entering Review or Error, focus moves to that state's heading (`tabIndex={-1}`), so keyboard and screen reader users land on the result. Back in Request (Stop, Try again from Review), focus returns to the textarea.
+- **AIR-30** The diff is readable without colour: each line starts with `+`, `-` or a space, removed lines are also struck through, and the diff region (`role="region"`, `aria-label` "Changes to the Dockerfile", or "Rewritten Dockerfile" when showing the full file) is focusable for scrolling (axe `scrollable-region-focusable`).
 - **AIR-31** All controls meet the target-size rule used by the panel (PNL-30), and the dialog passes axe in both colour schemes (ARCH-29).
 
 ## 9. Security and privacy
@@ -180,24 +181,20 @@ The dialog is a native `<dialog>` opened with `showModal()`. Unlike the explanat
 
 ## 11. Testing
 
-The real model is unavailable in CI (headless Chrome for Testing has no Gemini Nano), so all automated tests use a **fake** `LanguageModel` with scripted availability, download progress, replies, delays and errors.
+The real model is unavailable in CI (Puppeteer's Chrome for Testing has no `LanguageModel`), so all automated tests use a **fake** `LanguageModel` with scripted availability, download progress, replies, delays and errors: [fake-language-model.ts](../../web/src/__tests__/fake-language-model.ts) for unit tests, and an equivalent injected through `evaluateOnNewDocument` for E2E. jsdom has no modal dialogs, so [setup.ts](../../web/src/__tests__/setup.ts) emulates `showModal()`, `close()` and Escape.
 
-| Layer   | What                                                                                                                                                                                                                                                                            |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Pure    | `rewrite.test.ts` (Node): the user message builder and delimiters; the system prompt snapshot; validation (valid file, fenced file, prose, empty, too long, no `FROM`, `unknown` lines, schema violations); the diff.                                                           |
-| Support | AIR-7/8: no `LanguageModel` → no button; each `availability()` result; a throwing `availability()`.                                                                                                                                                                             |
-| Dialog  | `RewriteDialog.test.tsx` with the fake client: every state in §5.2; `create()` only after a click when downloadable (AIR-17); progress updates; Stop/Escape abort and destroy the clone (AIR-20); each error row of §7; the fixed error strings (AIR-27); focus moves (AIR-29). |
-| App     | `App.test.tsx` › "rewrite": Open in viewer adds and selects **Rewritten**, its tokens open explanations, rewriting again uses it as the base, `df-example` never stores it, the button is absent without support.                                                               |
-| E2E     | `rewrite.feature`: without the fake, the button is absent (the real CI state); with a fake injected through `evaluateOnNewDocument`, a full flow from request to the explained **Rewritten** example; axe with the dialog open in both colour schemes; no CSP violations.       |
-| Budget  | `npm run size` checks the entry and rewrite chunks separately (AIR-13).                                                                                                                                                                                                         |
-| Manual  | Before release, on a supported desktop: the first-use download, then each suggestion chip on each bundled example; record the results as a short checklist in the PR. Model output is non-deterministic (AIR-6), so this is a spot check, not a golden test.                    |
+| Layer   | What                                                                                                                                                                                                                                                                                                                           |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Pure    | `rewrite.test.ts` (Node): the user message builder and delimiters; the response schema; the system prompt snapshot; validation (valid file, fenced file, prose, empty, too large, too many lines, no `FROM`, `unknown` lines, schema violations, long changes); the diff.                                                      |
+| Support | `App.test.tsx` › "rewrite" (AIR-7/8): no `LanguageModel` → no button; each `availability()` result; a throwing `availability()`; the check never calls `create()`.                                                                                                                                                             |
+| Dialog  | `RewriteDialog.test.tsx` with the fake model: every state in §5.2; `create()` only after a click when downloadable (AIR-17); progress updates; one base session and destroyed clones (AIR-15); Stop/Escape abort and destroy the clone (AIR-20); each error row of §7; the fixed error strings (AIR-27); focus moves (AIR-29). |
+| App     | `App.test.tsx` › "rewrite": Open in viewer adds and selects **Rewritten** and closes the panel, its tokens open explanations, rewriting again uses it as the base, `df-example` never stores it, the button disappears when the model goes away (AIR-9).                                                                       |
+| E2E     | `rewrite.feature`: with `LanguageModel` removed, the button is absent; with the fake, a full flow from request to the explained **Rewritten** example with no CSP violations; axe with the review open in both colour schemes.                                                                                                 |
+| Budget  | `npm run size` checks the entry and each lazy chunk separately (AIR-13).                                                                                                                                                                                                                                                       |
+| Manual  | Before release, on a supported desktop: the first-use download, then each suggestion chip on each bundled example; record the results as a short checklist in the PR. Model output is non-deterministic (AIR-6), so this is a spot check, not a golden test.                                                                   |
 
-## 12. Changes to other documents when implemented
+## 12. Related changes in other documents
 
-- [site-architecture.md](./site-architecture.md):
-  - ARCH-14: add the lazy rewrite chunk as the one exception (AIR-12).
-  - ARCH-15 and `check-size.ts`: separate entry and lazy-chunk budgets (AIR-13).
-  - ARCH-3: `App` state gains `aiSupport` and the in-memory rewritten example.
-  - §10.3: point to AIR-25 and AIR-34 for model-generated Dockerfiles.
-- [explanation-panel.md](./explanation-panel.md) PNL-25: the status region also carries rewrite announcements (AIR-28).
-- README.md: a feature bullet ("Rewrite with on-device AI in supported Chrome versions") and the new files in the project tree.
+- [site-architecture.md](./site-architecture.md): ARCH-3 (the `languageModel` and `rewritten` state), ARCH-13 and ARCH-14 (the lazy chunk, AIR-12), ARCH-15 (per-chunk budgets, AIR-13), §10.1 (the rewrite is never stored) and §10.3 (AIR-25 and AIR-34 for model-generated Dockerfiles).
+- [explanation-panel.md](./explanation-panel.md) PNL-25: the rewrite dialog has its own status region (AIR-28).
+- README.md: the feature list and project tree.

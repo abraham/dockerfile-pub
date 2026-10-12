@@ -27,6 +27,8 @@ const contentSecurityPolicy: Plugin = {
 
 export default defineConfig({
   plugins: [preact(), contentSecurityPolicy],
+  // The only lazy chunk depends on nothing but the entry, so there is nothing to preload (AIR-13).
+  build: { modulePreload: { polyfill: false } },
   test: {
     environment: 'jsdom',
     globals: true,

@@ -1,11 +1,11 @@
 # Spec: Site architecture
 
-|                   |                                                                                                                                                                                                                                                                                                              |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Status**        | Draft. Documents the current architecture; deviations and open questions are flagged inline.                                                                                                                                                                                                                 |
-| **Last verified** | 2026-10-11 (against `main` + the `specs` branch changes)                                                                                                                                                                                                                                                     |
-| **Scope**         | Runtime structure, build, styling, testing layers, CI/CD, hosting, and the decisions behind them                                                                                                                                                                                                             |
-| **Related specs** | [tokenizer.md](./tokenizer.md) · [run-command-explanations.md](./run-command-explanations.md) · [explanation-content-model.md](./explanation-content-model.md) · [explanation-panel.md](./explanation-panel.md) · [github-workflows.md](./github-workflows.md) · [ai-rewrite.md](./ai-rewrite.md) (proposed) |
+|                   |                                                                                                                                                                                                                                                                                                   |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**        | Draft. Documents the current architecture; deviations and open questions are flagged inline.                                                                                                                                                                                                      |
+| **Last verified** | 2026-10-11 (against `main` + the `specs` branch changes)                                                                                                                                                                                                                                          |
+| **Scope**         | Runtime structure, build, styling, testing layers, CI/CD, hosting, and the decisions behind them                                                                                                                                                                                                  |
+| **Related specs** | [tokenizer.md](./tokenizer.md) · [run-command-explanations.md](./run-command-explanations.md) · [explanation-content-model.md](./explanation-content-model.md) · [explanation-panel.md](./explanation-panel.md) · [github-workflows.md](./github-workflows.md) · [ai-rewrite.md](./ai-rewrite.md) |
 
 ## 1. Overview
 
@@ -15,40 +15,41 @@ Dockerfile Explainer is a **static, client-only single-page app**. When the bund
 - no API calls,
 - no routing,
 - no third-party runtime scripts,
-- no user-supplied input.
+- no user-supplied Dockerfiles. The one generated input is an optional rewrite by the browser's on-device AI ([ai-rewrite.md](./ai-rewrite.md)), which runs locally.
 
 ```mermaid
 flowchart LR
   subgraph Repo["Repository"]
     SRC["web/src<br/>Preact + CSS Modules"]
   end
-  SRC -->|vite build| DIST["web/dist<br/>index.html + 1 JS + 1 CSS"]
+  SRC -->|vite build| DIST["web/dist<br/>index.html + entry JS/CSS<br/>+ lazy rewrite chunk"]
   DIST -->|deploy.yml<br/>actions/deploy-pages| GHP["GitHub Pages"]
   GHP -->|custom domain| USER["https://dockerfile.pub/"]
 ```
 
 ## 2. Repository layout
 
-| Path                                                    | Role                                                                                                                            |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `web/`                                                  | The whole app. All npm scripts run from here.                                                                                   |
-| `web/index.html`                                        | Vite entry HTML. Contains `<div id="root">`, the meta description and the favicon link.                                         |
-| `web/public/`                                           | Static files copied to `dist/` unchanged (`favicon.svg`).                                                                       |
-| `web/src/main.tsx`                                      | Bootstrap: imports `global.css` and renders `<App />` into `#root`.                                                             |
-| `web/src/App.tsx`                                       | The only stateful component: holds state and lays out the page.                                                                 |
-| `web/src/components/`                                   | UI components, one `.module.css` per component.                                                                                 |
-| `web/src/data/`                                         | Pure TypeScript: `tokenizer/`, explanation `content/`, `commands/`, the `explanations.ts` entry point and `examples.ts`.        |
-| `web/src/styles/global.css`                             | Design tokens, reset and base element styles.                                                                                   |
-| `web/src/__tests__/`                                    | Vitest unit and component tests. `setup.ts` holds shared test setup.                                                            |
-| `web/features/`                                         | Cucumber + Puppeteer end-to-end tests.                                                                                          |
-| `web/scripts/check-size.ts`                             | Bundle-size budget check (`npm run size`, ARCH-15).                                                                             |
-| `web/tsconfig.json`                                     | TypeScript config for every `.ts`/`.tsx` file in `web/` (`npm run typecheck`, ARCH-6).                                          |
-| `web/.nvmrc`                                            | The Node version used by CI and deploy (WF-31).                                                                                 |
-| `web/cucumber.yml`                                      | Cucumber profiles: `default` and `smoke` (ARCH-18).                                                                             |
-| `web/eslint.config.ts`, `web/.stylelintrc.json`         | TypeScript and CSS lint config (§8).                                                                                            |
-| `.prettierrc`, `.prettierignore`, `.markdownlint.jsonc` | Repo-wide format and Markdown lint config (§8). They live at the root so they apply to `README.md`, `docs/` and `.github/` too. |
-| `.github/workflows/`                                    | `ci.yml` (verify) and `deploy.yml` (publish).                                                                                   |
-| `docs/specs/`                                           | These specs. This file is the source of truth for architecture; the README links here instead of repeating it.                  |
+| Path                                                    | Role                                                                                                                                                            |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `web/`                                                  | The whole app. All npm scripts run from here.                                                                                                                   |
+| `web/index.html`                                        | Vite entry HTML. Contains `<div id="root">`, the meta description and the favicon link.                                                                         |
+| `web/public/`                                           | Static files copied to `dist/` unchanged (`favicon.svg`).                                                                                                       |
+| `web/src/main.tsx`                                      | Bootstrap: imports `global.css` and renders `<App />` into `#root`.                                                                                             |
+| `web/src/App.tsx`                                       | The only stateful component: holds state and lays out the page.                                                                                                 |
+| `web/src/components/`                                   | UI components, one `.module.css` per component.                                                                                                                 |
+| `web/src/data/`                                         | Pure TypeScript: `tokenizer/`, explanation `content/`, `commands/`, `rewrite/` (AI prompt and validation), the `explanations.ts` entry point and `examples.ts`. |
+| `web/src/ai/`                                           | Browser glue for Chrome's Prompt API ([ai-rewrite.md](./ai-rewrite.md) §4).                                                                                     |
+| `web/src/styles/global.css`                             | Design tokens, reset and base element styles.                                                                                                                   |
+| `web/src/__tests__/`                                    | Vitest unit and component tests. `setup.ts` holds shared test setup.                                                                                            |
+| `web/features/`                                         | Cucumber + Puppeteer end-to-end tests.                                                                                                                          |
+| `web/scripts/check-size.ts`                             | Bundle-size budget check (`npm run size`, ARCH-15).                                                                                                             |
+| `web/tsconfig.json`                                     | TypeScript config for every `.ts`/`.tsx` file in `web/` (`npm run typecheck`, ARCH-6).                                                                          |
+| `web/.nvmrc`                                            | The Node version used by CI and deploy (WF-31).                                                                                                                 |
+| `web/cucumber.yml`                                      | Cucumber profiles: `default` and `smoke` (ARCH-18).                                                                                                             |
+| `web/eslint.config.ts`, `web/.stylelintrc.json`         | TypeScript and CSS lint config (§8).                                                                                                                            |
+| `.prettierrc`, `.prettierignore`, `.markdownlint.jsonc` | Repo-wide format and Markdown lint config (§8). They live at the root so they apply to `README.md`, `docs/` and `.github/` too.                                 |
+| `.github/workflows/`                                    | `ci.yml` (verify) and `deploy.yml` (publish).                                                                                                                   |
+| `docs/specs/`                                           | These specs. This file is the source of truth for architecture; the README links here instead of repeating it.                                                  |
 
 ## 3. Runtime architecture
 
@@ -64,6 +65,11 @@ flowchart TD
   EP --> EC[ExplanationContent]
   EC --> RT[RichText]
   App --> CB[CopyButton]
+  App --> RB[RewriteButton]
+  RB -.->|"import() on first click"| RD[RewriteDialog]
+  App --> ai[ai/support]
+  RD --> lm[ai/language-model]
+  lm --> rw[data/rewrite]
   App --> tok[data/tokenizer]
   App --> ex[data/examples]
   App --> expl[data/explanations]
@@ -75,16 +81,18 @@ flowchart TD
   - `App` resolves each token's explanation once per example switch and attaches it as `token.explanation` (`Explanation | null`), together with `token.summary`, the flattened `short` text (EXP-29). `DockerfileViewer` treats a token as interactive when `token.explanation` is non-null and uses `summary` for its tooltip and accessible name. `ExplanationPanel` receives a `PanelEntry` (`{ key, ref, explanation }`) derived from `App`'s panel state. Components may import types from `src/data/`, but no runtime code. The tokenizer itself stays independent of the explanation content (tokenizer spec §2).
 - **ARCH-3 There is one owner of application state.** `App` holds all cross-component state:
 
-  | State           | Type                                                                                       | Persisted                                                                                                    |
-  | --------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-  | `activeExample` | example key                                                                                | `localStorage['df-example']` (invalid or missing values fall back to `simple`; storage errors are swallowed) |
-  | `panel`         | `PanelState`: `{ sourceTokenId, stack: PanelEntry[] }` or `null` (explanation-panel.md §3) | no                                                                                                           |
+  | State           | Type                                                                                       | Persisted                                                                                                                                 |
+  | --------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+  | `activeExample` | example key, or `rewritten`                                                                | `localStorage['df-example']` (invalid or missing values fall back to `simple`; storage errors are swallowed; `rewritten` is never stored) |
+  | `rewritten`     | `{ content, request }` or `null`: the applied AI rewrite (AIR-21)                          | no                                                                                                                                        |
+  | `languageModel` | the Prompt API object, or `null` when the on-device model isn't supported (AIR-7)          | no                                                                                                                                        |
+  | `panel`         | `PanelState`: `{ sourceTokenId, stack: PanelEntry[] }` or `null` (explanation-panel.md §3) | no                                                                                                                                        |
 
   The open entry, the Back target, the highlighted token and the status announcement are all derived from `panel`.
 
   There is no store, context or router. Introduce one only if state has to be shared across more than one level of components, or deep links are added (see §10.2).
 
-- **ARCH-4 Derived data is memoised.** The tokenized `lines`, with explanations attached, are recomputed only when `activeExample` changes (`useMemo`). The example list is computed once. The tokenizer runs on the client, on every example switch; this is cheap because inputs are under 30 lines.
+- **ARCH-4 Derived data is memoised.** The tokenized `lines`, with explanations attached, are recomputed only when the shown Dockerfile changes (`useMemo`). The tokenizer runs on the client, on every example switch; this is cheap because bundled inputs are under 30 lines and AI rewrites are capped at 400 lines (AIR-25).
 
 ### 3.2 Framework
 
@@ -125,20 +133,24 @@ flowchart TD
 - **ARCH-13 Vite** with `@preact/preset-vite`. The config ([vite.config.ts](../../web/vite.config.ts)) also holds the Vitest config and a small build-only plugin that injects the CSP (ARCH-24). No `base`, `build.target` or chunking options are set, so Vite's defaults apply:
   - `base: '/'`, which means asset URLs are root-absolute (see ARCH-23),
   - build target = Vite 8's `baseline-widely-available` (see ARCH-30),
-  - a single JS chunk and a single CSS file.
-- **ARCH-14 All content is bundled.** Examples and explanations ship in the main JS chunk. There is no lazy loading and nothing is fetched at runtime.
+  - one entry JS chunk and CSS file, plus the lazy `RewriteDialog` JS and CSS (ARCH-14).
+
+  The one non-default option is `build.modulePreload.polyfill: false`: the only lazy chunk depends on nothing but the entry, so the polyfill would be dead weight (AIR-13).
+
+- **ARCH-14 All content is bundled.** Examples and explanations ship in the main JS chunk, and nothing is fetched from another origin at runtime. The one lazy chunk is the AI rewrite dialog, loaded on first use only by browsers that support it (AIR-12).
 
 ## 6. Performance budget
 
 - **ARCH-15 Budget.** CONTRIBUTING.md says "No new dependencies unless strictly necessary. The bundle must stay small." The README cites the measured size and the budget below.
 
-  | Asset | Raw      | Gzip    | Measured                               |
-  | ----- | -------- | ------- | -------------------------------------- |
-  | JS    | 120.7 KB | 39.8 KB | 2026-10-12, `vite build`               |
-  | CSS   | 14.2 KB  | 3.6 KB  | 2026-10-12                             |
-  | HTML  | 0.8 KB   | 0.5 KB  | 2026-10-11 (includes the CSP meta tag) |
+  | Asset              | Raw      | Gzip    | Measured                               |
+  | ------------------ | -------- | ------- | -------------------------------------- |
+  | JS (entry)         | 123.1 KB | 40.8 KB | 2026-10-12, `vite build`               |
+  | JS (rewrite chunk) | 10.7 KB  | 4.4 KB  | 2026-10-12                             |
+  | CSS (all)          | 18.7 KB  | 4.7 KB  | 2026-10-12                             |
+  | HTML               | 0.8 KB   | 0.5 KB  | 2026-10-11 (includes the CSP meta tag) |
 
-  > ✅ **Enforced in CI.** [scripts/check-size.ts](../../web/scripts/check-size.ts) (`npm run size`, run after Build in `ci.yml`) fails if the gzipped JS total exceeds **40 KB** or the gzipped CSS total exceeds **5 KB**. It also fails if `dist/assets` contains no JS. The README cites the same numbers. (`vite build` reports kB of 1,000 bytes; `check-size.ts` reports KiB, so the same bundle shows as 38.5 KB there.)
+  > ✅ **Enforced in CI.** [scripts/check-size.ts](../../web/scripts/check-size.ts) (`npm run size`, run after Build in `ci.yml`) fails if the gzipped entry JS chunk exceeds **40 KB**, any lazy JS chunk exceeds **8 KB** (AIR-13), or the gzipped CSS total exceeds **5 KB**. It also fails if `dist/assets` doesn't contain exactly one entry chunk. The README cites the same numbers. (`vite build` reports kB of 1,000 bytes; `check-size.ts` reports KiB, so the same entry shows as 39.5 KB there.)
   >
   > The JS budget was raised from 20 KB to 28 KB on 2026-10-12 (D15), then to 40 KB later the same day (D16), after the tokenizer (about 7 KB gzipped), the explanation content and the command catalog were implemented and measured. 40 KB still leaves headroom while catching a framework-sized dependency.
 
@@ -217,7 +229,7 @@ The detailed rules (WF-*) live in [github-workflows.md](./github-workflows.md); 
 
 ### 10.1 Privacy
 
-The site has no analytics, no cookies and no external requests at runtime. The only things stored on the user's device are the selected example (`localStorage['df-example']`) and clipboard writes, which happen only when the user clicks Copy. **Required:** keep it that way unless a privacy note is added to the README.
+The site has no analytics, no cookies and no external requests at runtime. The only things stored on the user's device are the selected example (`localStorage['df-example']`) and clipboard writes, which happen only when the user clicks Copy. The optional AI rewrite runs on the device's built-in model and is kept in memory only (AIR-21, AIR-32). **Required:** keep it that way unless a privacy note is added to the README.
 
 ### 10.2 Deep linking
 
@@ -233,6 +245,8 @@ Today all input is bundled and trusted. Letting users paste their own Dockerfile
 - persisting the content would raise privacy questions.
 
 Treat this as a new spec, not an extension of an existing one.
+
+Model-generated Dockerfiles from the AI rewrite already cross this boundary in a limited form: they are validated and size-capped (AIR-25), rendered as text only, and never persisted (AIR-34).
 
 ### 10.4 Metadata and SEO
 
