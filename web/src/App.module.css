@@ -98,10 +98,6 @@
   align-items: stretch;
 }
 
-.workspacePanelOpen .viewerSection {
-  flex: 0 0 calc((100% - var(--sp-4)) * 2 / 3);
-}
-
 .viewerSection {
   flex: 1;
   min-width: 0;
@@ -111,6 +107,10 @@
   overflow: hidden;
   border: 1px solid var(--c-border);
   background: var(--c-surface);
+}
+
+.workspacePanelOpen .viewerSection {
+  flex: 0 0 calc((100% - var(--sp-4)) * 2 / 3);
 }
 
 .viewerHeader {
@@ -131,9 +131,17 @@
   flex-shrink: 0;
 }
 
-.viewerHeader .dot:nth-child(1) { background: #ff5f57; }
-.viewerHeader .dot:nth-child(2) { background: #febc2e; }
-.viewerHeader .dot:nth-child(3) { background: #28c840; }
+.viewerHeader .dot:nth-child(1) {
+  background: #ff5f57;
+}
+
+.viewerHeader .dot:nth-child(2) {
+  background: #febc2e;
+}
+
+.viewerHeader .dot:nth-child(3) {
+  background: #28c840;
+}
 
 .fileName {
   font-family: var(--font-mono);
@@ -141,12 +149,6 @@
   color: var(--c-muted);
   margin-left: var(--sp-2);
   flex: 1;
-}
-
-/* Remove the double border from the inner viewer */
-.viewerSection :global(.viewer) {
-  border: none;
-  border-radius: 0;
 }
 
 /* ── Footer ── */
@@ -170,7 +172,7 @@
 }
 
 /* ── Responsive ── */
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .app {
     height: auto;
     min-height: 100dvh;

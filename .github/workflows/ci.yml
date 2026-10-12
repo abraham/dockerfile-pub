@@ -8,9 +8,14 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
     defaults:
@@ -21,31 +26,48 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version-file: web/.nvmrc
           cache: npm
           cache-dependency-path: web/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Chromium dependencies
+      - name: Install Chrome for Puppeteer
         run: npx puppeteer browsers install chrome
 
-      - name: Lint
+      - name: Lint (JS, CSS, Markdown)
         run: npm run lint
+
+      - name: Lint workflows
+        working-directory: .
+        # Pinned by digest (WF-29); Dependabot does not update this, bump it by hand.
+        run: docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 -color
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Type-check
+        run: npm run typecheck
 
       - name: Run tests
         run: npm run test:run
+
+      - name: Build
+        run: npm run build
+
+      - name: Check bundle size
+        run: npm run size
 
       - name: Run feature tests
         env:
           BASE_URL: http://127.0.0.1:4173
           FEATURE_ARTIFACTS_DIR: /tmp/feature-test-artifacts
         run: |
-          npm run dev -- --host 127.0.0.1 --port 4173 > /tmp/vite-dev.log 2>&1 &
+          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort > /tmp/vite-preview.log 2>&1 &
           SERVER_PID=$!
           trap 'kill $SERVER_PID' EXIT
-          for i in {1..30}; do
+          for _ in {1..30}; do
             if curl --silent --fail "$BASE_URL" >/dev/null; then
               break
             fi
@@ -61,8 +83,5 @@ jobs:
           name: feature-test-artifacts
           path: |
             /tmp/feature-test-artifacts
-            /tmp/vite-dev.log
+            /tmp/vite-preview.log
           if-no-files-found: ignore
-
-      - name: Build
-        run: npm run build

@@ -1,12 +1,12 @@
 # Spec: RUN command explanations
 
-| | |
-|---|---|
-| **Status** | Draft. Documents current behaviour; deviations and open questions are flagged inline. |
-| **Source** | `getChunkExplanationKey()` in [tokenizer.js](../../web/src/data/tokenizer.js); `getExplanation()` / `buildRunChunkExplanation()` in [explanations.js](../../web/src/data/explanations.js) |
-| **Rendered by** | `Token` in [DockerfileViewer.jsx](../../web/src/components/DockerfileViewer.jsx), [SidePanel.jsx](../../web/src/components/SidePanel.jsx) |
-| **Tests** | [tokenizer.test.js](../../web/src/__tests__/tokenizer.test.js), [App.test.jsx](../../web/src/__tests__/App.test.jsx) |
-| **Related** | [tokenizer.md](./tokenizer.md) (TOK-20, TOK-22, §6.2–6.4) |
+|                 |                                                                                                                                                                                           |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**      | Draft. Documents current behaviour; deviations and open questions are flagged inline.                                                                                                     |
+| **Source**      | `getChunkExplanationKey()` in [tokenizer.js](../../web/src/data/tokenizer.js); `getExplanation()` / `buildRunChunkExplanation()` in [explanations.js](../../web/src/data/explanations.js) |
+| **Rendered by** | `Token` in [DockerfileViewer.jsx](../../web/src/components/DockerfileViewer.jsx), [SidePanel.jsx](../../web/src/components/SidePanel.jsx)                                                 |
+| **Tests**       | [tokenizer.test.js](../../web/src/__tests__/tokenizer.test.js), [App.test.jsx](../../web/src/__tests__/App.test.jsx)                                                                      |
+| **Related**     | [tokenizer.md](./tokenizer.md) (TOK-20, TOK-22, §6.2–6.4)                                                                                                                                 |
 
 ## 1. Purpose
 
@@ -54,11 +54,11 @@ flowchart LR
 
 The chunk is matched against these rules in order; the first match wins:
 
-| # | Category | Condition | Example chunks |
-|---|---|---|---|
-| **RUNX-9** | Control operator | `chunk` is exactly one of `&&` `\|\|` `;` `\|` | `&&` |
-| **RUNX-10** | Option | `chunk.startsWith('-')` | `-S`, `-G`, `-qO-`, `--` |
-| **RUNX-11** | Command / argument | anything else | `npm`, `ci`, `addgroup`, `/app`, `\`, `[`, `(date)` |
+| #           | Category           | Condition                                      | Example chunks                                      |
+| ----------- | ------------------ | ---------------------------------------------- | --------------------------------------------------- |
+| **RUNX-9**  | Control operator   | `chunk` is exactly one of `&&` `\|\|` `;` `\|` | `&&`                                                |
+| **RUNX-10** | Option             | `chunk.startsWith('-')`                        | `-S`, `-G`, `-qO-`, `--`                            |
+| **RUNX-11** | Command / argument | anything else                                  | `npm`, `ci`, `addgroup`, `/app`, `\`, `[`, `(date)` |
 
 Notes:
 
@@ -74,14 +74,14 @@ Every generated explanation fits the standard `Explanation` shape (`title`, `sho
 - `details` uses `\n\n` between paragraphs,
 - there is at least one official Docker docs link.
 
-| Field | Control operator | Option | Command / argument |
-|---|---|---|---|
-| `title` | `chunk` | `chunk` | `chunk` |
-| `short` | `Shell control operator used to chain commands in RUN.` | `Command-line option passed to the command in RUN.` | `Part of the shell command executed by RUN.` |
-| `details` ¶1 | `"<chunk>" controls how shell commands flow inside RUN.` | `"<chunk>" is an option argument for the command being run (for example adduser/addgroup).` | `"<chunk>" is a command or argument in the RUN shell command.` |
-| `details` ¶2 | Combine steps in one layer; explains `&&` | Option meaning depends on the tool; check its docs | Runs via `/bin/sh -c`; invites clicking other fragments |
-| `syntax` | `RUN command <chunk> command` | `RUN command <chunk> <value>` | `RUN <chunk>` |
-| `links` | `RUN reference` → `https://docs.docker.com/reference/dockerfile/#run` | same | same |
+| Field        | Control operator                                                      | Option                                                                                      | Command / argument                                             |
+| ------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `title`      | `chunk`                                                               | `chunk`                                                                                     | `chunk`                                                        |
+| `short`      | `Shell control operator used to chain commands in RUN.`               | `Command-line option passed to the command in RUN.`                                         | `Part of the shell command executed by RUN.`                   |
+| `details` ¶1 | `"<chunk>" controls how shell commands flow inside RUN.`              | `"<chunk>" is an option argument for the command being run (for example adduser/addgroup).` | `"<chunk>" is a command or argument in the RUN shell command.` |
+| `details` ¶2 | Combine steps in one layer; explains `&&`                             | Option meaning depends on the tool; check its docs                                          | Runs via `/bin/sh -c`; invites clicking other fragments        |
+| `syntax`     | `RUN command <chunk> command`                                         | `RUN command <chunk> <value>`                                                               | `RUN <chunk>`                                                  |
+| `links`      | `RUN reference` → `https://docs.docker.com/reference/dockerfile/#run` | same                                                                                        | same                                                           |
 
 - **RUNX-12** All three `short` strings are fixed (they do not include the chunk text), so they always stay within the 120-character limit.
 - **RUNX-13** Paragraph 2 of the operator explanation always describes `&&`, whichever operator was clicked.
@@ -102,21 +102,26 @@ These rules apply equally to static explanations; they are listed here because R
 
 ## 8. Coverage in bundled examples
 
-| Example | Line | Interactive RUN fragments |
-|---|---|---|
-| Simple | `RUN npm install` | `npm`, `install` |
-| Average | `RUN npm ci` | `npm`, `ci` |
-| Average | `RUN npm run build` | `npm`, `run`, `build` |
-| Complex | `RUN --mount=type=cache,target=/root/.npm \` | `\` only (`--mount` is a flag) |
-| Complex | `    npm ci --omit=dev` | **none** (continuation line; see §9.1) |
-| Complex | `RUN npm ci` / `RUN npm run build` | as Average |
+<!-- Leading spaces in the Line column are significant (indented lines). -->
+<!-- markdownlint-disable MD038 -->
+
+| Example | Line                                                         | Interactive RUN fragments                                                        |
+| ------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| Simple  | `RUN npm install`                                            | `npm`, `install`                                                                 |
+| Average | `RUN npm ci`                                                 | `npm`, `ci`                                                                      |
+| Average | `RUN npm run build`                                          | `npm`, `run`, `build`                                                            |
+| Complex | `RUN --mount=type=cache,target=/root/.npm \`                 | `\` only (`--mount` is a flag)                                                   |
+| Complex | `    npm ci --omit=dev`                                      | **none** (continuation line; see §9.1)                                           |
+| Complex | `RUN npm ci` / `RUN npm run build`                           | as Average                                                                       |
 | Complex | `RUN addgroup -S appgroup && adduser -S appuser -G appgroup` | `addgroup`, `-S`, `appgroup`, `&&`, `adduser`, `-S`, `appuser`, `-G`, `appgroup` |
+
+<!-- markdownlint-enable MD038 -->
 
 ## 9. Known deviations and open questions
 
 ### 9.1 Continuation lines lose RUN context
 
-*(tokenizer.md §6.2)* The lines after `RUN … \` are tokenized without the `RUN` keyword, so none of their fragments are interactive. The only shell command in the Complex example's cache-mount step (`npm ci --omit=dev`) can't be clicked, while the same words on a single-line `RUN` can.
+_(tokenizer.md §6.2)_ The lines after `RUN … \` are tokenized without the `RUN` keyword, so none of their fragments are interactive. The only shell command in the Complex example's cache-mount step (`npm ci --omit=dev`) can't be clicked, while the same words on a single-line `RUN` can.
 
 **Decision needed:** carry `RUN` context across `\`-continued lines.
 
@@ -125,14 +130,15 @@ These rules apply equally to static explanations; they are listed here because R
 The line-continuation `\`, the exec-form punctuation `[`, `,`, `]`, and the `$` in `$(…)` / `$1` all match RUNX-11. They are shown as "a command or argument in the RUN shell command", which is wrong.
 
 **Decision needed:** either give these chunks no key (not interactive), or add categories for them, for example:
-- *Line continuation*, linking to the Dockerfile escape/line-continuation docs,
-- *Exec form*, explaining JSON-array `RUN`.
+
+- _Line continuation_, linking to the Dockerfile escape/line-continuation docs,
+- _Exec form_, explaining JSON-array `RUN`.
 
 Exec-form `RUN ["a", "b"]` is not run by a shell at all, so the RUNX-11 wording "executed by the image shell" is wrong for it.
 
 ### 9.3 Shell long options are not interactive
 
-*(tokenizer.md §6.4)* `--omit=dev` becomes a `flag` with key `--omit`. That key has no explanation, so the token is not interactive, while `-S` is. **Decision needed:** inside `RUN`, classify long options after the first non-flag argument as chunks, so they fall under RUNX-10.
+_(tokenizer.md §6.4)_ `--omit=dev` becomes a `flag` with key `--omit`. That key has no explanation, so the token is not interactive, while `-S` is. **Decision needed:** inside `RUN`, classify long options after the first non-flag argument as chunks, so they fall under RUNX-10.
 
 ### 9.4 Option explanation names specific tools
 
@@ -140,7 +146,8 @@ RUNX-10 paragraph 1 always says "(for example adduser/addgroup)", even for optio
 
 ### 9.5 Operator explanation always describes `&&`
 
-*(RUNX-13)* Clicking `||`, `;`, or `|` shows a paragraph explaining `&&`. **Proposed:** add a short per-operator sentence:
+_(RUNX-13)_ Clicking `||`, `;`, or `|` shows a paragraph explaining `&&`. **Proposed:** add a short per-operator sentence:
+
 - `&&` runs the next command on success,
 - `||` runs it on failure,
 - `;` runs it unconditionally,
@@ -153,6 +160,7 @@ RUNX-10 paragraph 1 always says "(for example adduser/addgroup)", even for optio
 ### 9.7 Commands carry no specific knowledge
 
 Every command (`npm`, `apt-get`, `adduser`) gets the same generic text. **Open question:** add an optional static map of common commands (e.g. `RUN_CMD:apt-get`) with tailored explanations and links? If added, define:
+
 - how it is keyed (first chunk after `RUN` or after an operator only),
 - precedence over the generic fallback,
 - the bundle-size budget for the extra content.
@@ -166,15 +174,15 @@ Every command (`npm`, `apt-get`, `adduser`) gets the same generic text. **Open q
 
 ## 11. Test coverage
 
-| Rule | Covered? | Where / what to add |
-|---|---|---|
-| RUNX-1 keys for command, option, operator chunks | ✅ | `tokenizer.test.js` › "sets explanation keys for non-whitespace RUN command fragments" |
-| RUNX-1 no keys for whitespace / non-RUN lines | ❌ | Assert `null` for whitespace on `RUN` and for chunks on `COPY` |
-| RUNX-2 flags, variables, strings on RUN keep non-chunk keys | ❌ | `RUN --mount=x echo "$HOME" $X` |
-| RUNX-5–7 lookup routing, empty chunk → `null` | ❌ | Unit-test `getExplanation` directly (no `explanations.test.js` yet) |
-| RUNX-9–11 classification for each category | ❌ | One case per category, plus `--` and `foo;` |
-| RUNX-12 `short` ≤ 120 chars, ≥ 1 link | ❌ | Property check across all generated categories and all static entries |
-| RUNX-16 button `aria-label` / `title` | ✅ partial | `App.test.jsx` finds `/^addgroup:/` by role/name |
-| RUNX-17 panel heading = chunk text | ✅ | `App.test.jsx` › "opens for RUN command fragments after the keyword" |
-| RUNX-18 swapping between fragments | ❌ | Click `addgroup` then `&&`; panel stays open and heading changes |
-| End-to-end (Cucumber) | ❌ | Scenario in `instruction_explanation.feature`: click a RUN fragment in the Complex example |
+| Rule                                                        | Covered?   | Where / what to add                                                                        |
+| ----------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------ |
+| RUNX-1 keys for command, option, operator chunks            | ✅         | `tokenizer.test.js` › "sets explanation keys for non-whitespace RUN command fragments"     |
+| RUNX-1 no keys for whitespace / non-RUN lines               | ❌         | Assert `null` for whitespace on `RUN` and for chunks on `COPY`                             |
+| RUNX-2 flags, variables, strings on RUN keep non-chunk keys | ❌         | `RUN --mount=x echo "$HOME" $X`                                                            |
+| RUNX-5–7 lookup routing, empty chunk → `null`               | ❌         | Unit-test `getExplanation` directly (no `explanations.test.js` yet)                        |
+| RUNX-9–11 classification for each category                  | ❌         | One case per category, plus `--` and `foo;`                                                |
+| RUNX-12 `short` ≤ 120 chars, ≥ 1 link                       | ❌         | Property check across all generated categories and all static entries                      |
+| RUNX-16 button `aria-label` / `title`                       | ✅ partial | `App.test.jsx` finds `/^addgroup:/` by role/name                                           |
+| RUNX-17 panel heading = chunk text                          | ✅         | `App.test.jsx` › "opens for RUN command fragments after the keyword"                       |
+| RUNX-18 swapping between fragments                          | ❌         | Click `addgroup` then `&&`; panel stays open and heading changes                           |
+| End-to-end (Cucumber)                                       | ❌         | Scenario in `instruction_explanation.feature`: click a RUN fragment in the Complex example |

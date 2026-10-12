@@ -7,3 +7,14 @@ default:
   format:
     - progress-bar
     - summary
+
+# Post-deploy check against production (deploy.yml); CLI paths don't replace profile paths.
+smoke:
+  paths:
+    - features/site.feature
+  require:
+    - features/support/**/*.js
+    - features/step_definitions/**/*.js
+  format:
+    - progress-bar
+    - summary
