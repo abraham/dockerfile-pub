@@ -1,13 +1,14 @@
-import { Before, After } from '@cucumber/cucumber';
+import { Before, After, Status } from '@cucumber/cucumber';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import type { PuppeteerWorld } from './world';
 
-Before({ tags: '@browser' }, async function () {
+Before({ tags: '@browser' }, async function (this: PuppeteerWorld) {
   await this.openBrowser();
 });
 
-After({ tags: '@browser' }, async function ({ pickle, result }) {
-  if (result?.status === 'FAILED' && this.page) {
+After({ tags: '@browser' }, async function (this: PuppeteerWorld, { pickle, result }) {
+  if (result?.status === Status.FAILED && this.page) {
     const artifactsDir = process.env.FEATURE_ARTIFACTS_DIR || 'features/artifacts';
     const safeName = pickle.name
       .toLowerCase()

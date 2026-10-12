@@ -19,7 +19,7 @@ Click any instruction or flag to see a concise explanation, syntax reference, an
 
 ### Prerequisites
 
-- Node.js 22+ (the version CI uses is in `web/.nvmrc`)
+- Node.js 22.18+ (it runs the TypeScript scripts and Cucumber steps directly; the version CI uses is in `web/.nvmrc`)
 - npm 10+
 
 ### Install
@@ -49,8 +49,8 @@ npm test
 
 The test suite covers:
 
-- **Unit tests** — tokenizer / parser and token → explanation mapping (`tokenizer.test.js`)
-- **UI tests** — example toggling, panel open/close, Escape key, documentation links, copy button behaviour (`App.test.jsx`, `SidePanel.test.jsx`, `CopyButton.test.jsx`)
+- **Unit tests** — tokenizer / parser and token → explanation mapping (`tokenizer.test.ts`)
+- **UI tests** — example toggling, panel open/close, Escape key, documentation links, copy button behaviour (`App.test.tsx`, `SidePanel.test.tsx`, `CopyButton.test.tsx`)
 
 ### Feature tests (end-to-end)
 
@@ -97,9 +97,9 @@ The feature suite currently covers:
 ### Lint, format and type-check
 
 ```bash
-npm run lint           # ESLint (all JS), Stylelint (CSS), markdownlint (all *.md in the repo)
+npm run lint           # ESLint (all TypeScript), Stylelint (CSS), markdownlint (all *.md in the repo)
 npm run format:check   # Prettier over the whole repo; `npm run format` to fix
-npm run typecheck
+npm run typecheck      # tsc --noEmit over every .ts/.tsx file
 ```
 
 Everything except generated files is linted and formatted; see [site-architecture.md §8](./docs/specs/site-architecture.md#8-tooling-and-conventions). CI also lints the workflow files with `actionlint`.
@@ -124,10 +124,11 @@ npm run preview
 ```text
 web/
 ├── index.html                 Entry HTML
-├── vite.config.js             Vite + Vitest configuration
-├── jsconfig.json              Type-checking config for JSDoc types
+├── vite.config.ts             Vite + Vitest configuration
+├── tsconfig.json              TypeScript configuration
+├── eslint.config.ts           ESLint configuration
 ├── scripts/
-│   └── check-size.js          Bundle-size budget check
+│   └── check-size.ts          Bundle-size budget check
 ├── features/
 │   ├── browser.feature        Headless browser smoke test
 │   ├── site.feature           Site navigation smoke test
@@ -139,35 +140,35 @@ web/
 │   ├── step_definitions/      Cucumber step implementations
 │   └── support/               World + hooks (browser lifecycle)
 ├── src/
-│   ├── main.jsx               App entry point
-│   ├── App.jsx                Root component — state, layout
+│   ├── main.tsx               App entry point
+│   ├── App.tsx                Root component — state, layout
 │   ├── App.module.css         App-level styles
 │   ├── components/
-│   │   ├── CopyButton.jsx            Copy-to-clipboard button
+│   │   ├── CopyButton.tsx            Copy-to-clipboard button
 │   │   ├── CopyButton.module.css
-│   │   ├── DockerfileViewer.jsx      Renders tokenized Dockerfile
+│   │   ├── DockerfileViewer.tsx      Renders tokenized Dockerfile
 │   │   ├── DockerfileViewer.module.css
-│   │   ├── ExampleToggler.jsx        Simple/Average/Complex toggle
+│   │   ├── ExampleToggler.tsx        Simple/Average/Complex toggle
 │   │   ├── ExampleToggler.module.css
-│   │   ├── SidePanel.jsx             Explanation side panel
+│   │   ├── SidePanel.tsx             Explanation side panel
 │   │   └── SidePanel.module.css
 │   ├── data/
-│   │   ├── examples.js        Three Dockerfile texts
-│   │   ├── tokenizer.js       Parses Dockerfile into Line/Token objects
-│   │   └── explanations.js    Keyword/flag → explanation content map
+│   │   ├── examples.ts        Three Dockerfile texts
+│   │   ├── tokenizer.ts       Parses Dockerfile into Line/Token objects
+│   │   └── explanations.ts    Keyword/flag → explanation content map
 │   ├── styles/
 │   │   └── global.css         Design tokens + CSS reset
 │   └── __tests__/
-│       ├── setup.js
-│       ├── tokenizer.test.js
-│       ├── App.test.jsx
-│       ├── SidePanel.test.jsx
-│       └── CopyButton.test.jsx
+│       ├── setup.ts
+│       ├── tokenizer.test.ts
+│       ├── App.test.tsx
+│       ├── SidePanel.test.tsx
+│       └── CopyButton.test.tsx
 ```
 
 ## Architecture overview
 
-A static Preact single-page app with no backend. `App` tokenizes the selected example (`src/data/tokenizer.js`), attaches an explanation to each token (`src/data/explanations.js`), and owns all state. The selected example is persisted to `localStorage` under the key `df-example`.
+A static Preact + TypeScript single-page app with no backend. `App` tokenizes the selected example (`src/data/tokenizer.ts`), attaches an explanation to each token (`src/data/explanations.ts`), and owns all state. The selected example is persisted to `localStorage` under the key `df-example`.
 
 The specs in [docs/specs/](./docs/specs/) are the source of truth:
 

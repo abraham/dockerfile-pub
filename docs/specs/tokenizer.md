@@ -3,8 +3,8 @@
 |               |                                                                                                                     |
 | ------------- | ------------------------------------------------------------------------------------------------------------------- |
 | **Status**    | Draft — documents current behaviour; deviations flagged inline                                                      |
-| **Source**    | [web/src/data/tokenizer.js](../../web/src/data/tokenizer.js)                                                        |
-| **Tests**     | [web/src/\_\_tests\_\_/tokenizer.test.js](../../web/src/__tests__/tokenizer.test.js)                                |
+| **Source**    | [web/src/data/tokenizer.ts](../../web/src/data/tokenizer.ts)                                                        |
+| **Tests**     | [web/src/\_\_tests\_\_/tokenizer.test.ts](../../web/src/__tests__/tokenizer.test.ts)                                |
 | **Consumers** | `App` (via `useMemo`; attaches `getExplanation()` results to each token before passing lines to `DockerfileViewer`) |
 
 ## 1. Purpose
@@ -19,16 +19,20 @@ The tokenizer is a **line-oriented lexer for display**, not a Dockerfile parser.
 
 ## 2. Public API
 
-```js
+```ts
 import { tokenize, TOKEN_TYPE, LINE_TYPE, INSTRUCTIONS } from './data/tokenizer';
+import type { Token, Line, TokenType, LineType } from './data/tokenizer';
 ```
 
-| Export                           | Kind          | Description                                                                                                                                                         |
-| -------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tokenize(text: string): Line[]` | function      | Pure and deterministic. Same input → deep-equal output. No I/O, no dependency on the explanation map.                                                               |
-| `TOKEN_TYPE`                     | enum          | `keyword`, `flag`, `string`, `variable`, `comment`, `text`                                                                                                          |
-| `LINE_TYPE`                      | enum          | `blank`, `comment`, `instruction`, `continuation`                                                                                                                   |
-| `INSTRUCTIONS`                   | `Set<string>` | The 18 Dockerfile instruction keywords: `ADD ARG CMD COPY ENTRYPOINT ENV EXPOSE FROM HEALTHCHECK LABEL MAINTAINER ONBUILD RUN SHELL STOPSIGNAL USER VOLUME WORKDIR` |
+| Export                           | Kind                  | Description                                                                                                                                                         |
+| -------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tokenize(text: string): Line[]` | function              | Pure and deterministic. Same input → deep-equal output. No I/O, no dependency on the explanation map.                                                               |
+| `TOKEN_TYPE`                     | `as const` object     | `keyword`, `flag`, `string`, `variable`, `comment`, `text`. Its values form the `TokenType` union.                                                                  |
+| `LINE_TYPE`                      | `as const` object     | `blank`, `comment`, `instruction`, `continuation`. Its values form the `LineType` union.                                                                            |
+| `INSTRUCTIONS`                   | `ReadonlySet<string>` | The 18 Dockerfile instruction keywords: `ADD ARG CMD COPY ENTRYPOINT ENV EXPOSE FROM HEALTHCHECK LABEL MAINTAINER ONBUILD RUN SHELL STOPSIGNAL USER VOLUME WORKDIR` |
+| `Token`, `Line`                  | interfaces            | See §3.                                                                                                                                                             |
+
+These are plain objects, not TypeScript `enum`s; the project uses only erasable TypeScript syntax (ARCH-6).
 
 `TOKEN_TYPE` values are also CSS class suffixes (`styles['type-<value>']` in `DockerfileViewer`); renaming one is a breaking change for styling.
 
@@ -40,7 +44,7 @@ import { tokenize, TOKEN_TYPE, LINE_TYPE, INSTRUCTIONS } from './data/tokenizer'
 | ----------- | ---------------- | ----------------------------------------------------------------- |
 | `lineIndex` | `number`         | Zero-based position in the input                                  |
 | `raw`       | `string`         | The original line text, unmodified                                |
-| `type`      | `LINE_TYPE`      | See §4.2                                                          |
+| `type`      | `LineType`       | See §4.2                                                          |
 | `keyword`   | `string \| null` | The instruction keyword for `instruction` lines; otherwise `null` |
 | `tokens`    | `Token[]`        | Ordered, non-empty                                                |
 
@@ -50,7 +54,7 @@ import { tokenize, TOKEN_TYPE, LINE_TYPE, INSTRUCTIONS } from './data/tokenizer'
 | ---------------- | ---------------- | ------------------------------------------- |
 | `id`             | `string`         | `` `${lineIndex}-${tokenIndex}` ``          |
 | `text`           | `string`         | Non-empty slice of `raw`                    |
-| `type`           | `TOKEN_TYPE`     | See §4.4                                    |
+| `type`           | `TokenType`      | See §4.4                                    |
 | `lineIndex`      | `number`         | Equals the owning line's `lineIndex`        |
 | `tokenIndex`     | `number`         | Zero-based, contiguous within the line      |
 | `explanationKey` | `string \| null` | Lookup key for `getExplanation()`; see §4.5 |

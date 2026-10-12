@@ -1,17 +1,23 @@
 import { useState, useRef, useCallback } from 'preact/hooks';
 import styles from './CopyButton.module.css';
 
+type CopyStatus = 'idle' | 'copied' | 'failed';
+
+const LABELS: Record<CopyStatus, { text: string; ariaLabel: string }> = {
+  idle: { text: 'Copy', ariaLabel: 'Copy Dockerfile to clipboard' },
+  copied: { text: 'Copied!', ariaLabel: 'Copied to clipboard' },
+  failed: { text: 'Copy failed', ariaLabel: 'Copy to clipboard failed' },
+};
+
 /**
  * A button that copies the given text to the clipboard.
  * Shows a brief "Copied!" or "Copy failed" message that auto-reverts after 2 seconds.
- *
- * @param {{ text: string }} props
  */
-export function CopyButton({ text }) {
-  const [status, setStatus] = useState(/** @type {'idle' | 'copied' | 'failed'} */ ('idle'));
-  const timeoutRef = useRef(/** @type {ReturnType<typeof setTimeout> | undefined} */ (undefined));
+export function CopyButton({ text }: { text: string }) {
+  const [status, setStatus] = useState<CopyStatus>('idle');
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  const showStatus = useCallback((/** @type {'copied' | 'failed'} */ next) => {
+  const showStatus = useCallback((next: Exclude<CopyStatus, 'idle'>) => {
     setStatus(next);
     clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => setStatus('idle'), 2000);
@@ -29,15 +35,11 @@ export function CopyButton({ text }) {
     );
   }, [text, showStatus]);
 
-  const label = {
-    idle: ['Copy', 'Copy Dockerfile to clipboard'],
-    copied: ['Copied!', 'Copied to clipboard'],
-    failed: ['Copy failed', 'Copy to clipboard failed'],
-  }[status];
+  const label = LABELS[status];
 
   return (
-    <button type="button" class={styles.button} onClick={handleClick} aria-label={label[1]}>
-      {label[0]}
+    <button type="button" class={styles.button} onClick={handleClick} aria-label={label.ariaLabel}>
+      {label.text}
     </button>
   );
 }

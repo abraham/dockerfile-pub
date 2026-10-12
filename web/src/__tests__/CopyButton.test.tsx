@@ -42,8 +42,7 @@ describe('CopyButton', () => {
   });
 
   // userEvent.setup() installs its own clipboard stub, so override navigator.clipboard after it.
-  /** @param {Pick<Clipboard, 'writeText'> | undefined} clipboard */
-  function setupWithClipboard(clipboard) {
+  function setupWithClipboard(clipboard: Pick<Clipboard, 'writeText'> | undefined) {
     const user = userEvent.setup();
     Object.defineProperty(navigator, 'clipboard', {
       value: clipboard,

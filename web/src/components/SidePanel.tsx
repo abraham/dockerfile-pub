@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'preact/hooks';
+import type { ResolvedToken } from './DockerfileViewer';
 import styles from './SidePanel.module.css';
 
-/** @param {string} block */
-function isListDetailBlock(block) {
+function isListDetailBlock(block: string): boolean {
   const lines = block
     .split('\n')
     .map((line) => line.trim())
@@ -13,11 +13,7 @@ function isListDetailBlock(block) {
   return lines.every((line) => /^([-*]\s+.+)|(.+\s[—–-]\s.+)$/.test(line));
 }
 
-/**
- * @param {string} block
- * @param {number} key
- */
-function renderDetailBlock(block, key) {
+function renderDetailBlock(block: string, key: number) {
   if (!isListDetailBlock(block)) {
     return (
       <p key={key} class={styles.para}>
@@ -42,18 +38,16 @@ function renderDetailBlock(block, key) {
   );
 }
 
-/**
- * Side panel that displays an explanation for the selected token.
- *
- * @param {{
- *   token: import('./DockerfileViewer').ResolvedToken | null,
- *   isOpen: boolean,
- *   onClose: () => void
- * }} props
- */
-export function SidePanel({ token, isOpen, onClose }) {
-  const panelRef = useRef(/** @type {HTMLElement | null} */ (null));
-  const closeButtonRef = useRef(/** @type {HTMLButtonElement | null} */ (null));
+interface SidePanelProps {
+  token: ResolvedToken | null;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+/** Side panel that displays an explanation for the selected token. */
+export function SidePanel({ token, isOpen, onClose }: SidePanelProps) {
+  const panelRef = useRef<HTMLElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   // Focus the close button when the panel opens
   useEffect(() => {
@@ -65,8 +59,7 @@ export function SidePanel({ token, isOpen, onClose }) {
   // Close on Escape key
   useEffect(() => {
     if (!isOpen) return;
-    /** @param {KeyboardEvent} e */
-    function handleKeyDown(e) {
+    function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         onClose();
       }
@@ -79,11 +72,11 @@ export function SidePanel({ token, isOpen, onClose }) {
   useEffect(() => {
     if (!isOpen || !panelRef.current) return;
     const panel = panelRef.current;
-    /** @param {KeyboardEvent} e */
-    function handleKeyDown(e) {
+    function handleKeyDown(e: KeyboardEvent) {
       if (e.key !== 'Tab') return;
-      /** @type {NodeListOf<HTMLElement>} */
-      const candidates = panel.querySelectorAll('a, button, [tabindex]:not([tabindex="-1"])');
+      const candidates = panel.querySelectorAll<HTMLElement>(
+        'a, button, [tabindex]:not([tabindex="-1"])',
+      );
       const focusable = Array.from(candidates).filter((el) => !el.hasAttribute('disabled'));
       if (focusable.length === 0) return;
       const first = focusable[0];

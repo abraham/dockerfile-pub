@@ -4,8 +4,7 @@ import '@testing-library/jest-dom/vitest';
 // `undefined` unless `--localstorage-file` is passed. Vitest's jsdom
 // environment won't override it because it already exists in the Node.js
 // global scope. Patch globalThis here so tests get jsdom's Storage objects.
-/** @type {typeof globalThis & { jsdom?: { window: Window } }} */
-const testGlobal = globalThis;
+const testGlobal = globalThis as typeof globalThis & { jsdom?: { window: Window } };
 if (testGlobal.jsdom) {
   Object.defineProperty(globalThis, 'localStorage', {
     value: testGlobal.jsdom.window.localStorage,
